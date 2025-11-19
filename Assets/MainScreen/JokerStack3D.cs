@@ -155,7 +155,7 @@ public class JokerStack3D : MonoBehaviour
         rb.isKinematic = true;     // 드래그 중 물리 영향 X
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.mass = 0.1f;
-        rb.angularDrag = 0.05f;
+        rb.angularDamping = 0.05f;
     }
 
 

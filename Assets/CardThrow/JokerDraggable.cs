@@ -1,114 +1,169 @@
 ﻿using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
 public class JokerDraggable : MonoBehaviour
 {
     private Camera cam;
     private Rigidbody rb;
+    private BoxCollider boxCol;
 
-    private bool isDragging = false;
-    private float dragZ = 2.5f;
+    private bool dragging = false;
+    private bool flying = false;
 
-    private Vector3 dragStartPos;
-    private Vector3 dragStartMouse;
+    private Vector3 lastMousePos;      // XZ 평면 기준 마우스 위치
+    private Vector3 velocity;
+    private float depth;
 
-    private float throwForce = 15f;
+    public float throwPower = 15f;
+    public float maxThrowSpeed = 25f;
+    public float spinPower = 180f;
+    public float castSkin = 0.02f;
 
-    void Awake()
+    private Vector3 angularVel;
+
+    public Transform backWall;
+    public float wallStopOffset = 0.02f;
+
+    private void Awake()
     {
         cam = Camera.main;
 
         rb = GetComponent<Rigidbody>();
-        if (rb == null)
-            rb = gameObject.AddComponent<Rigidbody>();
-
         rb.useGravity = false;
         rb.isKinematic = true;
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        boxCol = GetComponent<BoxCollider>();
+
+        // 자동 연결
+        if (backWall == null)
+        {
+            GameObject wall = GameObject.FindWithTag("BackWall");
+            if (wall != null) backWall = wall.transform;
+        }
     }
 
-    //---------------------------------------
-    // 클릭 시작
-    //---------------------------------------
+    // -----------------------
+    // 마우스 XY → 월드 XZ 평면 투영
+    // -----------------------
+    private Vector3 GetMouseOnXZPlane()
+    {
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+
+        // 현재 카드의 Y 높이와 평행한 XZ 평면
+        float planeY = transform.position.y;
+
+        float t = (planeY - ray.origin.y) / ray.direction.y;
+        return ray.origin + ray.direction * t;
+    }
+
     private void OnMouseDown()
     {
-        isDragging = true;
+        dragging = true;
+        flying = false;
 
-        dragStartPos = transform.position;
-        dragStartMouse = Input.mousePosition;
+        velocity = Vector3.zero;
+        angularVel = Vector3.zero;
+
+        lastMousePos = GetMouseOnXZPlane();
+
+        Debug.Log("=== MouseDown ===");
+        Debug.Log("lastMousePos : " + lastMousePos);
     }
 
-    //---------------------------------------
-    // 드래그 중
-    //---------------------------------------
     private void OnMouseDrag()
     {
-        if (!isDragging) return;
+        if (!dragging) return;
 
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-        Vector3 targetPos = ray.GetPoint(dragZ);
+        Vector3 mouseXZ = GetMouseOnXZPlane();
 
-        transform.position = Vector3.Lerp(transform.position, targetPos, 0.4f);
+        // XZ 평면 기준 이동 벡터
+        velocity = (mouseXZ - lastMousePos) / Time.deltaTime;
+        lastMousePos = mouseXZ;
+
+        transform.position = mouseXZ;
     }
 
-    //---------------------------------------
-    // 클릭 떼면 → 던지기
-    //---------------------------------------
     private void OnMouseUp()
     {
-        if (!isDragging) return;
-        isDragging = false;
+        dragging = false;
+        flying = true;
 
-        rb.isKinematic = false;
-        rb.useGravity = true;
+        Vector3 dragVel = velocity;
 
-        Vector3 dragEndMouse = Input.mousePosition;
-        Vector3 dragDelta = dragEndMouse - dragStartMouse;
+        // XZ 평면 속도 크기 계산
+        float flatSpeed = new Vector2(dragVel.x, dragVel.z).magnitude;
 
-        // 좌우/상하 드래그 방향
-        Vector3 sideDir =
-            cam.transform.right * (dragDelta.x / Screen.width) +
-            cam.transform.up * (dragDelta.y / Screen.height);
+        // 기존처럼 Y를 0으로 초기화하되,
+        // "아주 약한" Y 성분만 다시 추가
+        float upwardFactor = 0.1f; // ← 위/아래 민감도 (0.02 ~ 0.06 추천)
+        dragVel.y = flatSpeed * upwardFactor;
 
-        // 기본 전방(카메라 방향)
-        Vector3 forwardDir = cam.transform.forward;
+        // Lerp로 과도한 튐 제거
+        dragVel = Vector3.Lerp(Vector3.zero, dragVel, 0.65f);
 
-        // 최종 방향 = 벽 방향 + 드래그 방향
-        Vector3 worldDir = (forwardDir + sideDir).normalized;
+        // 최종 속도 계산
+        velocity = Vector3.ClampMagnitude(dragVel * throwPower, maxThrowSpeed);
 
-        Debug.Log("카드 던짐! 방향 = " + worldDir);
+        angularVel = Random.insideUnitSphere * spinPower;
 
-        rb.AddForce(worldDir * throwForce, ForceMode.Impulse);
+        Debug.Log("=== OnMouseUp ===");
+        Debug.Log("flatSpeed         : " + flatSpeed);
+        Debug.Log("added Y           : " + dragVel.y);
+        Debug.Log("final velocity    : " + velocity);
     }
 
-    //---------------------------------------
-    // 벽 충돌 → 박히기
-    //---------------------------------------
-    private void OnCollisionEnter(Collision collision)
+
+    private void Update()
     {
-        if (!collision.collider.CompareTag("BackWall"))
-            return;
+        if (!flying) return;
 
-        // 물리 중단
-        rb.velocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        rb.useGravity = false;
-        rb.isKinematic = true;
-
-        // 충돌 지점 + 노멀
-        Vector3 hitPoint = collision.contacts[0].point;
-        Vector3 normal = collision.contacts[0].normal;
-
-        // 살짝 앞으로 빼서 박히는 효과
-        transform.position = hitPoint + normal * 0.02f;
-
-        // 현재 회전 유지 (자연스러운 박힘)
-        Quaternion currentRot = transform.rotation;
-
-        // 완전 반대로 뒤집히는 것만 방지
-        Vector3 forward = currentRot * Vector3.forward;
-        if (Vector3.Dot(forward, -normal) < 0)
+        // BackWall null 체크 & 자동 재연결
+        if (backWall == null)
         {
-            transform.rotation = Quaternion.LookRotation(-normal, transform.up);
+            GameObject wall = GameObject.FindWithTag("BackWall");
+            if (wall != null) backWall = wall.transform;
+            if (backWall == null) return;
         }
+
+        Vector3 move = velocity * Time.deltaTime;
+
+        // Z축 강제 클램프 (뚫기 방지)
+        float wallZ = backWall.position.z;
+        if (transform.position.z >= wallZ - wallStopOffset)
+        {
+            flying = false;
+            velocity = Vector3.zero;
+            angularVel = Vector3.zero;
+
+            transform.position = new Vector3(
+                transform.position.x,
+                transform.position.y,
+                wallZ - wallStopOffset
+            );
+
+            return;
+        }
+
+        // BoxCast 충돌 감지
+        Vector3 halfSize = Vector3.Scale(boxCol.size * 0.5f, transform.localScale);
+        if (Physics.BoxCast(
+            transform.position,
+            halfSize,
+            velocity.normalized,
+            out RaycastHit hit,
+            transform.rotation,
+            move.magnitude + castSkin))
+        {
+            if (hit.transform.CompareTag("BackWall"))
+            {
+                GetComponent<CardStickOnWall>().ForceStick(hit);
+                flying = false;
+                return;
+            }
+        }
+
+        // 이동 + 회전
+        transform.position += move;
+        transform.Rotate(angularVel * Time.deltaTime, Space.Self);
     }
 }

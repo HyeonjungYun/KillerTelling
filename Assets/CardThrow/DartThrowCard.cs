@@ -6,8 +6,8 @@ public class DartThrowCard : MonoBehaviour
     private Rigidbody rb;
     private bool isDragging = false;
 
-    private float throwForce = 25f;   // ´øÁö´Â Èû
-    private float airSpin = 400f;     // È¸Àü ´À³¦
+    private float throwForce = 25f;   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
+    private float airSpin = 400f;     // È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
     void Start()
     {
@@ -31,18 +31,18 @@ public class DartThrowCard : MonoBehaviour
     void StartDrag()
     {
         isDragging = true;
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
     }
 
     void DragMove()
     {
         Vector3 mousePos = Input.mousePosition;
-        mousePos.z = 5f;  // Ä«¸Þ¶ó ¾ÕÂÊ ½Éµµ
+        mousePos.z = 5f;  // Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Éµï¿½
         Vector3 worldPos = cam.ScreenToWorldPoint(mousePos);
 
         transform.position = Vector3.Lerp(transform.position, worldPos, 0.35f);
-        transform.Rotate(Vector3.forward * airSpin * Time.deltaTime); // È¸Àü
+        transform.Rotate(Vector3.forward * airSpin * Time.deltaTime); // È¸ï¿½ï¿½
     }
 
     void Release()
