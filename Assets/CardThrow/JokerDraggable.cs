@@ -10,9 +10,8 @@ public class JokerDraggable : MonoBehaviour
     private bool dragging = false;
     private bool flying = false;
 
-    private Vector3 lastMousePos;      // XZ 평면 기준 마우스 위치
+    private Vector3 lastMousePos;
     private Vector3 velocity;
-    private float depth;
 
     public float throwPower = 15f;
     public float maxThrowSpeed = 25f;
@@ -24,6 +23,10 @@ public class JokerDraggable : MonoBehaviour
     public Transform backWall;
     public float wallStopOffset = 0.02f;
 
+    private float originalY;
+    private float boostedY;
+    private bool firstDragFrame = false;
+
     private void Awake()
     {
         cam = Camera.main;
@@ -34,7 +37,8 @@ public class JokerDraggable : MonoBehaviour
 
         boxCol = GetComponent<BoxCollider>();
 
-        // 자동 연결
+        originalY = transform.position.y;
+
         if (backWall == null)
         {
             GameObject wall = GameObject.FindWithTag("BackWall");
@@ -42,41 +46,57 @@ public class JokerDraggable : MonoBehaviour
         }
     }
 
-    // -----------------------
-    // 마우스 XY → 월드 XZ 평면 투영
-    // -----------------------
-    private Vector3 GetMouseOnXZPlane()
+    private Vector3 GetMouseOnXZPlane(float y)
     {
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-        // 현재 카드의 Y 높이와 평행한 XZ 평면
-        float planeY = transform.position.y;
-
-        float t = (planeY - ray.origin.y) / ray.direction.y;
+        float t = (y - ray.origin.y) / ray.direction.y;
         return ray.origin + ray.direction * t;
     }
 
     private void OnMouseDown()
     {
+        CameraElevator.Instance.RaiseCamera();
+
         dragging = true;
         flying = false;
 
         velocity = Vector3.zero;
         angularVel = Vector3.zero;
 
-        lastMousePos = GetMouseOnXZPlane();
+        // === 카메라 pitch 기반 Y 상승 예측 ===
+        float pitch = cam.transform.eulerAngles.x;
+        if (pitch > 180f) pitch -= 360f;
+        pitch = Mathf.Abs(pitch);
 
-        Debug.Log("=== MouseDown ===");
-        Debug.Log("lastMousePos : " + lastMousePos);
+        float camPitch01 = Mathf.Clamp01(pitch / 30f);
+        boostedY = originalY + camPitch01 * 2.0f;
+
+        // ❗ 절대 여기서 Y 이동시키지 않음 — 깜빡임 방지
+        // transform.position = ...
+
+        lastMousePos = GetMouseOnXZPlane(transform.position.y);
+        firstDragFrame = true;
+
+        Debug.Log($"[MouseDown] boostedY = {boostedY}");
     }
 
     private void OnMouseDrag()
     {
         if (!dragging) return;
 
-        Vector3 mouseXZ = GetMouseOnXZPlane();
+        // === 드래그 첫 프레임에서 단 한 번만 Y 보정 ===
+        if (firstDragFrame)
+        {
+            transform.position = new Vector3(
+                transform.position.x,
+                boostedY,
+                transform.position.z
+            );
+            firstDragFrame = false;
+        }
 
-        // XZ 평면 기준 이동 벡터
+        Vector3 mouseXZ = GetMouseOnXZPlane(boostedY);
+
         velocity = (mouseXZ - lastMousePos) / Time.deltaTime;
         lastMousePos = mouseXZ;
 
@@ -85,39 +105,32 @@ public class JokerDraggable : MonoBehaviour
 
     private void OnMouseUp()
     {
+        CameraElevator.Instance.ResetCamera();
+
         dragging = false;
         flying = true;
 
         Vector3 dragVel = velocity;
 
-        // XZ 평면 속도 크기 계산
         float flatSpeed = new Vector2(dragVel.x, dragVel.z).magnitude;
 
-        // 기존처럼 Y를 0으로 초기화하되,
-        // "아주 약한" Y 성분만 다시 추가
-        float upwardFactor = 0.1f; // ← 위/아래 민감도 (0.02 ~ 0.06 추천)
+        // 높이 증가 계산
+        float upwardFactor = 0.1f;
         dragVel.y = flatSpeed * upwardFactor;
 
-        // Lerp로 과도한 튐 제거
         dragVel = Vector3.Lerp(Vector3.zero, dragVel, 0.65f);
 
-        // 최종 속도 계산
         velocity = Vector3.ClampMagnitude(dragVel * throwPower, maxThrowSpeed);
 
         angularVel = Random.insideUnitSphere * spinPower;
 
-        Debug.Log("=== OnMouseUp ===");
-        Debug.Log("flatSpeed         : " + flatSpeed);
-        Debug.Log("added Y           : " + dragVel.y);
-        Debug.Log("final velocity    : " + velocity);
+        Debug.Log("[MouseUp] Final Throw Velocity = " + velocity);
     }
-
 
     private void Update()
     {
         if (!flying) return;
 
-        // BackWall null 체크 & 자동 재연결
         if (backWall == null)
         {
             GameObject wall = GameObject.FindWithTag("BackWall");
@@ -127,7 +140,7 @@ public class JokerDraggable : MonoBehaviour
 
         Vector3 move = velocity * Time.deltaTime;
 
-        // Z축 강제 클램프 (뚫기 방지)
+        // === z 클램프 ===
         float wallZ = backWall.position.z;
         if (transform.position.z >= wallZ - wallStopOffset)
         {
@@ -140,19 +153,20 @@ public class JokerDraggable : MonoBehaviour
                 transform.position.y,
                 wallZ - wallStopOffset
             );
-
             return;
         }
 
-        // BoxCast 충돌 감지
+        // === BoxCast 충돌 감지 ===
         Vector3 halfSize = Vector3.Scale(boxCol.size * 0.5f, transform.localScale);
+
         if (Physics.BoxCast(
             transform.position,
             halfSize,
             velocity.normalized,
             out RaycastHit hit,
             transform.rotation,
-            move.magnitude + castSkin))
+            move.magnitude + castSkin
+        ))
         {
             if (hit.transform.CompareTag("BackWall"))
             {
@@ -162,7 +176,7 @@ public class JokerDraggable : MonoBehaviour
             }
         }
 
-        // 이동 + 회전
+        // === 이동 + 회전 ===
         transform.position += move;
         transform.Rotate(angularVel * Time.deltaTime, Space.Self);
     }

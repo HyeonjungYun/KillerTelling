@@ -3,98 +3,96 @@ using UnityEngine;
 
 public class CardGraveyardManager : MonoBehaviour
 {
-    [Header("References")]
-    public Transform graveyardArea;
-    public GameObject card3DPrefab;
-    public int cardsPerBatch = 7;
+    public static CardGraveyardManager Instance;
 
-    private List<GameObject> graveyardCards = new();
-    private List<string> suits = new() { "S", "H", "D", "C" };
+    public Transform graveyardArea;   // 3D 배치 부모
+    public GameObject cardPrefab;     // Card3D 프리팹
 
-    public void AddCardsToGraveyard()
+    private List<Sprite> storedCards = new List<Sprite>();
+    public List<Sprite> StoredSprites => storedCards;
+
+    private void Awake()
     {
-        float cardThickness = 0.02f; // 카드 한 장의 높이
-        float stackSpacing = 0.8f;   // 무늬별 간격
-
-        // 덱 간격
-        float spacing = 1.5f; // 각 덱 간의 간격
-
-        // 덱 위치를 중앙에 배치
-        Vector3 centerPosition = new Vector3(0f, 0f, 0f); // 화면 중앙 기준
-
-        Dictionary<string, Vector3> suitPositions = new()
-        {
-            { "S", centerPosition + new Vector3(-spacing * 1.5f, 0, 0) },  // ♠
-            { "H", centerPosition + new Vector3(-spacing * 0.5f, 0, 0) },  // ♥
-            { "D", centerPosition + new Vector3(spacing * 0.5f, 0, 0) },   // ♦
-            { "C", centerPosition + new Vector3(spacing * 1.5f, 0, 0) },   // ♣
-        };
-
-
-
-
-        for (int i = 0; i < cardsPerBatch; i++)
-        {
-            string suit = suits[Random.Range(0, suits.Count)];
-            int rank = Random.Range(1, 14);
-            Sprite sprite = CardManager.GetCardSprite(suit, rank);
-
-            // 카드 생성
-            GameObject card = Instantiate(card3DPrefab, graveyardArea);
-            card.name = $"{suit}{rank}";
-
-            // 해당 무늬 스택의 기존 카드 개수만큼 높이 계산
-            int sameSuitCount = graveyardCards.FindAll(c => c != null && c.name.StartsWith(suit)).Count;
-            float height = sameSuitCount * cardThickness;
-
-            // ★ 무늬별로 일정 위치에 깔끔히 쌓기
-            card.transform.localPosition = suitPositions[suit]
-                               + new Vector3(0, height, 0);
-
-            card.transform.localRotation = Quaternion.Euler(90, 0, 0); // 정방향으로 쌓기
-
-            // 머티리얼 적용
-            MeshRenderer renderer = card.GetComponent<MeshRenderer>();
-            if (renderer != null && sprite != null)
-            {
-                Material mat = new Material(Shader.Find("Unlit/Transparent"));
-                mat.mainTexture = sprite.texture;
-                renderer.material = mat;
-            }
-
-            graveyardCards.Add(card);
-        }
-
-        Debug.Log($"Generated {cardsPerBatch} cards and stacked in graveyard. Total now: {graveyardCards.Count}");
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
-
-
-
-
-
-    // ★ 무늬별 카운트 함수 개선
-    public Dictionary<string, int> GetSuitCounts()
+    public void AddCards(List<Sprite> cards)
     {
-        Dictionary<string, int> counts = new()
+        storedCards.AddRange(cards);
+        UpdateGraveyardUI();
+    }
+
+    private void UpdateGraveyardUI()
+    {
+        // 기존 카드 제거
+        foreach (Transform child in graveyardArea)
+            Destroy(child.gameObject);
+
+        // 무늬별 그룹 생성
+        Dictionary<char, List<Sprite>> suitGroups = new Dictionary<char, List<Sprite>>()
         {
-            { "S", 0 },
-            { "H", 0 },
-            { "D", 0 },
-            { "C", 0 }
+            { 'S', new List<Sprite>() },  // Spade
+            { 'H', new List<Sprite>() },  // Heart
+            { 'D', new List<Sprite>() },  // Diamond
+            { 'C', new List<Sprite>() },  // Club
         };
 
-        foreach (var card in graveyardCards)
+        // 스프라이트 이름 분석 → 무늬 그룹에 넣기
+        foreach (Sprite spr in storedCards)
         {
-            if (card == null) continue;
-
-            foreach (string suit in suits)
-            {
-                if (card.name.StartsWith(suit))
-                    counts[suit]++;
-            }
+            char suit = ExtractSuit(spr.name);
+            suitGroups[suit].Add(spr);
         }
 
-        return counts;
+        // 🔥 위치/스케일 설정
+        float stackStartX = -1.5f;   // 맨 왼쪽 스택 X
+        float stackSpacingX = 1.3f;  // 스택 간 간격
+        float cardOffsetY = 0.04f;   // 스택 내 위로 쌓이는 간격
+        float cardScale = 1.1f;      // 카드 스케일 (2배 수준)
+
+        char[] suitOrder = { 'S', 'H', 'D', 'C' }; // 표시 순서
+
+        // 스택 생성
+        for (int s = 0; s < suitOrder.Length; s++)
+        {
+            char suit = suitOrder[s];
+            List<Sprite> list = suitGroups[suit];
+
+            float stackX = stackStartX + s * stackSpacingX;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Sprite spr = list[i];
+                GameObject obj = Instantiate(cardPrefab, graveyardArea);
+
+                Card3D card3D = obj.GetComponent<Card3D>();
+                card3D.SetSprite(spr);
+
+                obj.transform.localPosition = new Vector3(
+                    stackX,
+                    i * cardOffsetY,
+                    0f
+                );
+
+                obj.transform.localRotation = Quaternion.Euler(90, 0, 0);
+                obj.transform.localScale = Vector3.one * cardScale;
+            }
+        }
+    }
+
+    // 🔥 스프라이트 이름 마지막 글자에서 무늬 추출
+    private char ExtractSuit(string spriteName)
+    {
+        if (string.IsNullOrEmpty(spriteName))
+            return 'S';
+
+        char c = char.ToUpper(spriteName[spriteName.Length - 1]);
+
+        if (c == 'S' || c == 'H' || c == 'D' || c == 'C')
+            return c;
+
+        Debug.LogWarning("Unknown suit in sprite: " + spriteName);
+        return 'S';
     }
 }
