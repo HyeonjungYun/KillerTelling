@@ -207,17 +207,19 @@ public class JokerDraggable : MonoBehaviour
             return;
         }
 
-        // 1. 초기 속도(v0)
+        // 1. [기존] 순수한 직선 방향(목표지점) 계산
         Vector3 camForward = cam.transform.forward; camForward.y = 0; camForward.Normalize();
         Vector3 camRight = cam.transform.right; camRight.y = 0; camRight.Normalize();
 
         float deltaX = Input.mousePosition.x - startMouseX;
         float deltaY = Input.mousePosition.y - startMouseY;
 
-        Vector3 finalDirection = (camForward + (camRight * deltaX * aimSensitivity) + (Vector3.up * deltaY * aimSensitivity)).normalized;
-        currentVelocity = finalDirection * throwPower;
+        Vector3 aimDirection = (camForward + (camRight * deltaX * aimSensitivity) + (Vector3.up * deltaY * aimSensitivity)).normalized;
 
-        // 2. 가속도(a) 계산 (현재 조절된 currentCurvePower 사용)
+        // 이것이 우리가 '도달하고 싶은' 목표 속도입니다.
+        Vector3 targetVelocity = aimDirection * throwPower;
+
+        // 2. [기존] 가속도(a) 계산 (커브 힘)
         currentAcceleration = Vector3.zero;
         Vector3 rightVec = cam.transform.right;
         rightVec.y = 0; rightVec.Normalize();
@@ -227,23 +229,36 @@ public class JokerDraggable : MonoBehaviour
             case TrajectoryType.Straight:
                 currentAcceleration = Vector3.zero;
                 break;
-
             case TrajectoryType.CurveRight:
-                // 오른쪽 커브는 무조건 (+RightVector) 방향으로 힘을 받음
-                // currentCurvePower가 0 이상이므로 절대 반대 방향이 되지 않음
                 currentAcceleration = rightVec * currentCurvePower;
                 break;
-
             case TrajectoryType.CurveLeft:
-                // 왼쪽 커브는 무조건 (-RightVector) 방향으로 힘을 받음
                 currentAcceleration = -rightVec * currentCurvePower;
                 break;
         }
 
+        // === [핵심 수정] 속도 보정 (Compensated Velocity) ===
+        // 목표 지점에 도달하기 위해, 가속도의 반대 방향으로 초기 속도를 틀어줍니다.
+
+        // 예상 비행 시간 (거리 / 속력) -> 대략 10m 앞 기준
+        // (정확하지 않아도 궤적 시각화에는 충분합니다)
+        float estimatedTime = 10f / throwPower;
+
+        // 보정 공식: V_real = V_target - (0.5 * a * t)
+        // 가속도가 오른쪽으로 작용하면, 던질 때는 왼쪽으로 던져야 중앙에 맞음
+        currentVelocity = targetVelocity - (currentAcceleration * estimatedTime * 0.5f);
+
         // 3. 궤적 그리기
         DrawTrajectoryPath(transform.position, currentVelocity, currentAcceleration);
 
-        transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        // 4. [시각적 디테일] 카드의 회전도 실제 날아가는 방향(보정된 방향)을 보게 함
+        // 이렇게 해야 카드가 처음엔 옆을 보고 있다가 점점 중앙으로 휘어들어가는 느낌이 남
+        if (currentVelocity != Vector3.zero)
+        {
+            // 90도 눕힌 상태에서 Y축 회전(Yaw)만 날아가는 방향에 맞춤
+            Quaternion lookRot = Quaternion.LookRotation(currentVelocity);
+            transform.rotation = Quaternion.Euler(90f, lookRot.eulerAngles.y, 0f);
+        }
     }
 
     private void DrawTrajectoryPath(Vector3 startPos, Vector3 startVel, Vector3 accel)
