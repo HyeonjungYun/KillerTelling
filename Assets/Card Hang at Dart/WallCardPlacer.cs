@@ -46,11 +46,17 @@ public class WallCardPlacer : MonoBehaviour
             RectTransform rt = obj.GetComponent<RectTransform>();
             rt.anchoredPosition = pos + new Vector2(offsetX, offsetY);
 
+            // 🔥 여기 추가
+            rt.localPosition = new Vector3(rt.localPosition.x, rt.localPosition.y, -0.01f);
+
+
             float rot = Random.Range(-randomRotRange, randomRotRange);
             rt.localRotation = Quaternion.Euler(0, 0, rot);
 
             float scale = baseScale + Random.Range(-randomScaleRange, randomScaleRange);
             rt.localScale = new Vector3(scale, scale, 1);
+
+
         }
     }
 

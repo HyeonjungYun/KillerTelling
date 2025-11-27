@@ -17,7 +17,7 @@ MonoBehaviour:
   m_RendererType: 1
   m_RendererData: {fileID: 0}
   m_RendererDataList:
-  - {fileID: 11400000, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
+  - {fileID: 11400000, guid: 6419d191640fea44ba78c46a059eefcb, type: 2}
   m_DefaultRendererIndex: 0
   m_RequireDepthTexture: 1
   m_RequireOpaqueTexture: 1
@@ -78,18 +78,14 @@ MonoBehaviour:
   m_UseAdaptivePerformance: 1
   m_ColorGradingMode: 0
   m_ColorGradingLutSize: 32
-<<<<<<< HEAD
-=======
+
   m_AllowPostProcessAlphaOutput: 0
->>>>>>> origin/feature#4
+
   m_UseFastSRGBLinearConversion: 0
   m_SupportDataDrivenLensFlare: 1
   m_SupportScreenSpaceLensFlare: 1
   m_GPUResidentDrawerMode: 0
-<<<<<<< HEAD
-  m_UseLegacyLightmaps: 0
-=======
->>>>>>> origin/feature#4
+
   m_SmallMeshScreenPercentage: 0
   m_GPUResidentDrawerEnableOcclusionCullingInCameras: 0
   m_ShadowType: 1
@@ -98,7 +94,7 @@ MonoBehaviour:
   m_MaxPixelLights: 0
   m_ShadowAtlasResolution: 256
   m_VolumeFrameworkUpdateMode: 0
-  m_VolumeProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
+  m_VolumeProfile: {fileID: 0}
   apvScenesData:
     obsoleteSceneBounds:
       m_Keys: []
@@ -107,17 +103,11 @@ MonoBehaviour:
       m_Keys: []
       m_Values: 
   m_PrefilteringModeMainLightShadows: 3
-<<<<<<< HEAD
-  m_PrefilteringModeAdditionalLight: 4
-  m_PrefilteringModeAdditionalLightShadows: 0
-  m_PrefilterXRKeywords: 1
-  m_PrefilteringModeForwardPlus: 1
-  m_PrefilteringModeDeferredRendering: 0
-  m_PrefilteringModeScreenSpaceOcclusion: 1
-  m_PrefilterDebugKeywords: 1
-  m_PrefilterWriteRenderingLayers: 0
-  m_PrefilterHDROutput: 1
-=======
+  m_PrefilteringModeAdditionalLight: 0
+  m_PrefilteringModeAdditionalLightShadows: 2
+
+  m_PrefilterAlphaOutput: 1
+
   m_PrefilteringModeAdditionalLight: 0
   m_PrefilteringModeAdditionalLightShadows: 2
   m_PrefilterXRKeywords: 1
@@ -140,26 +130,18 @@ MonoBehaviour:
   m_PrefilterSSAOSampleCountHigh: 1
   m_PrefilterDBufferMRT1: 1
   m_PrefilterDBufferMRT2: 1
-<<<<<<< HEAD
-  m_PrefilterDBufferMRT3: 0
-  m_PrefilterSoftShadowsQualityLow: 0
-  m_PrefilterSoftShadowsQualityMedium: 0
-  m_PrefilterSoftShadowsQualityHigh: 0
-=======
+
   m_PrefilterDBufferMRT3: 1
   m_PrefilterSoftShadowsQualityLow: 1
   m_PrefilterSoftShadowsQualityMedium: 1
   m_PrefilterSoftShadowsQualityHigh: 1
->>>>>>> origin/feature#4
+
   m_PrefilterSoftShadows: 0
   m_PrefilterScreenCoord: 1
   m_PrefilterNativeRenderPass: 1
   m_PrefilterUseLegacyLightmaps: 0
-<<<<<<< HEAD
-=======
   m_PrefilterReflectionProbeBlending: 0
   m_PrefilterReflectionProbeBoxProjection: 0
->>>>>>> origin/feature#4
   m_ShaderVariantLogLevel: 0
   m_ShadowCascades: 0
   m_Textures:
