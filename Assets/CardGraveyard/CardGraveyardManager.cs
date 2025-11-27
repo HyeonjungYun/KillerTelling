@@ -5,8 +5,8 @@ public class CardGraveyardManager : MonoBehaviour
 {
     public static CardGraveyardManager Instance;
 
-    public Transform graveyardArea;   // 3D 배치 부모
-    public GameObject cardPrefab;     // Card3D 프리팹
+    public Transform graveyardArea;
+    public GameObject cardPrefab;
 
     private List<Sprite> storedCards = new List<Sprite>();
     public List<Sprite> StoredSprites => storedCards;
@@ -25,35 +25,30 @@ public class CardGraveyardManager : MonoBehaviour
 
     private void UpdateGraveyardUI()
     {
-        // 기존 카드 제거
         foreach (Transform child in graveyardArea)
             Destroy(child.gameObject);
 
-        // 무늬별 그룹 생성
         Dictionary<char, List<Sprite>> suitGroups = new Dictionary<char, List<Sprite>>()
         {
-            { 'S', new List<Sprite>() },  // Spade
-            { 'H', new List<Sprite>() },  // Heart
-            { 'D', new List<Sprite>() },  // Diamond
-            { 'C', new List<Sprite>() },  // Club
+            { 'S', new List<Sprite>() },
+            { 'H', new List<Sprite>() },
+            { 'D', new List<Sprite>() },
+            { 'C', new List<Sprite>() },
         };
 
-        // 스프라이트 이름 분석 → 무늬 그룹에 넣기
         foreach (Sprite spr in storedCards)
         {
             char suit = ExtractSuit(spr.name);
             suitGroups[suit].Add(spr);
         }
 
-        // 🔥 위치/스케일 설정
-        float stackStartX = -1.5f;   // 맨 왼쪽 스택 X
-        float stackSpacingX = 1.3f;  // 스택 간 간격
-        float cardOffsetY = 0.04f;   // 스택 내 위로 쌓이는 간격
-        float cardScale = 1.1f;      // 카드 스케일 (2배 수준)
+        float stackStartX = -1.5f;
+        float stackSpacingX = 1.3f;
+        float cardOffsetY = 0.04f;
+        float cardScale = 1.1f;
 
-        char[] suitOrder = { 'S', 'H', 'D', 'C' }; // 표시 순서
+        char[] suitOrder = { 'S', 'H', 'D', 'C' };
 
-        // 스택 생성
         for (int s = 0; s < suitOrder.Length; s++)
         {
             char suit = suitOrder[s];
@@ -79,9 +74,35 @@ public class CardGraveyardManager : MonoBehaviour
                 obj.transform.localScale = Vector3.one * cardScale;
             }
         }
+
+        // ❤️ 하트 카드가 3장 이상이면 장애물 Mesh 활성화
+        CheckObstacleActivation(suitGroups);
     }
 
-    // 🔥 스프라이트 이름 마지막 글자에서 무늬 추출
+    private void CheckObstacleActivation(Dictionary<char, List<Sprite>> suitGroups)
+    {
+        int heartCount = suitGroups['H'].Count;
+
+        // ObstacleMover는 항상 활성화 상태라고 가정
+        GameObject obstacleRoot = GameObject.Find("ObstacleMover");
+        if (obstacleRoot == null)
+        {
+            Debug.LogWarning("ObstacleMover not found in scene!");
+            return;
+        }
+
+        // 실제 움직이는 Mesh 찾기
+        Transform mesh = obstacleRoot.transform.Find("ObstacleMesh");
+        if (mesh == null)
+        {
+            Debug.LogWarning("ObstacleMesh child not found under ObstacleMover!");
+            return;
+        }
+
+        // 장애물 표시 여부
+        mesh.gameObject.SetActive(heartCount >= 3);
+    }
+
     private char ExtractSuit(string spriteName)
     {
         if (string.IsNullOrEmpty(spriteName))
