@@ -4,7 +4,11 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 28
+<<<<<<< HEAD
   productGUID: 19576747b311ed242a526f588289ee63
+=======
+  productGUID: 15bd92e2fe6bca34fafbe9f063861813
+>>>>>>> origin/feature#4
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -13,7 +17,11 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
+<<<<<<< HEAD
   productName: My project
+=======
+  productName: Killer Telling
+>>>>>>> origin/feature#4
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -134,7 +142,10 @@ PlayerSettings:
   switchNVNMaxPublicSamplerIDCount: 0
   switchMaxWorkerMultiple: 8
   switchNVNGraphicsFirmwareMemory: 32
+<<<<<<< HEAD
   switchGraphicsJobsSyncAfterKick: 1
+=======
+>>>>>>> origin/feature#4
   vulkanNumSwapchainBuffers: 3
   vulkanEnableSetSRGBWrite: 0
   vulkanEnablePreTransform: 1
@@ -256,7 +267,11 @@ PlayerSettings:
   appleEnableProMotion: 0
   shaderPrecisionModel: 0
   clonedFromGUID: 3c72c65a16f0acb438eed22b8b16c24a
+<<<<<<< HEAD
   templatePackageId: com.unity.template.urp-blank@17.0.14
+=======
+  templatePackageId: com.unity.template.urp-blank@17.0.12
+>>>>>>> origin/feature#4
   templateDefaultScene: Assets/Scenes/SampleScene.unity
   useCustomMainManifest: 0
   useCustomLauncherManifest: 0
@@ -817,12 +832,19 @@ PlayerSettings:
   webGLMemoryLinearGrowthStep: 16
   webGLMemoryGeometricGrowthStep: 0.2
   webGLMemoryGeometricGrowthCap: 96
+<<<<<<< HEAD
+=======
+  webGLEnableWebGPU: 0
+>>>>>>> origin/feature#4
   webGLPowerPreference: 2
   webGLWebAssemblyTable: 0
   webGLWebAssemblyBigInt: 0
   webGLCloseOnQuit: 0
   webWasm2023: 0
+<<<<<<< HEAD
   webEnableSubmoduleStrippingCompatibility: 0
+=======
+>>>>>>> origin/feature#4
   scriptingDefineSymbols: {}
   additionalCompilerArguments: {}
   platformArchitecture: {}
@@ -844,14 +866,22 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
+<<<<<<< HEAD
   metroPackageName: My project
+=======
+  metroPackageName: Killer Telling
+>>>>>>> origin/feature#4
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
+<<<<<<< HEAD
   metroApplicationDescription: My project
+=======
+  metroApplicationDescription: Killer Telling
+>>>>>>> origin/feature#4
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -922,11 +952,19 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
+<<<<<<< HEAD
   cloudProjectId: 2a865873-f430-4c08-a47b-04a033922102
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
   projectName: My project
   organizationId: guswnd444555
+=======
+  cloudProjectId: 3cc646e8-2183-49bf-add2-e345813bb32d
+  framebufferDepthMemorylessMode: 0
+  qualitySettingsNames: []
+  projectName: Killer Telling 2025-11-05_19-10-38
+  organizationId: lobelia0
+>>>>>>> origin/feature#4
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
@@ -935,5 +973,8 @@ PlayerSettings:
   insecureHttpOption: 0
   androidVulkanDenyFilterList: []
   androidVulkanAllowFilterList: []
+<<<<<<< HEAD
   androidVulkanDeviceFilterListAsset: {fileID: 0}
   d3d12DeviceFilterListAsset: {fileID: 0}
+=======
+>>>>>>> origin/feature#4

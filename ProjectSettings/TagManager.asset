@@ -4,7 +4,12 @@
 TagManager:
   serializedVersion: 3
   tags:
+<<<<<<< HEAD
   - Target
+=======
+  - BackWall
+  - Card
+>>>>>>> origin/feature#4
   layers:
   - Default
   - TransparentFX
@@ -14,9 +19,15 @@ TagManager:
   - UI
   - 
   - 
+<<<<<<< HEAD
   - 
   - 
   - 
+=======
+  - Card
+  - IgnoreCard
+  - BackWallLayer
+>>>>>>> origin/feature#4
   - 
   - 
   - 
