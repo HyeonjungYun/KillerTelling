@@ -1,4 +1,7 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
 [RequireComponent(typeof(LineRenderer))]
@@ -49,6 +52,20 @@ public class JokerDraggable : MonoBehaviour
     private enum State { Idle, MovingToHand, Selected, Aiming, Flying, Stuck }
     private State currentState = State.Idle;
 
+    private CameraRotator camRotator;
+
+    // ========= NEW: Trajectory ============
+    private LineRenderer line;
+    private Queue<Vector3> mouseSamples = new Queue<Vector3>();
+    private float sampleDuration = 0.05f; // 최근 50ms만 사용
+
+    public int trajectorySteps = 20;
+    public float trajectoryStepDist = 0.3f;
+
+    // Wall UI 카드 참조
+    public WallCardPlacer wallPlacer;
+
+
     private void Awake()
     {
         cam = Camera.main;
@@ -87,6 +104,9 @@ public class JokerDraggable : MonoBehaviour
         lineRen.startColor = Color.white; // 원하는 색으로 변경 가능 (예: Color.red)
         lineRen.endColor = Color.white;
 
+
+        camRotator = FindFirstObjectByType<CameraRotator>();
+        wallPlacer = FindObjectOfType<WallCardPlacer>();
 
         if (backWall == null)
         {

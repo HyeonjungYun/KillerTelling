@@ -4,8 +4,10 @@ using System.Collections.Generic;
 
 public class DeckManager : MonoBehaviour
 {
-    public RectTransform deckPanel;   // 카드덱 패널 (캔버스 하위)
-    public GameObject cardPrefab;     // 카드 UI 프리팹 (Image)
+    public static DeckManager Instance;   // ⭐ Singleton
+
+    public RectTransform deckPanel;
+    public GameObject cardPrefab;
     public CardManager cardManager;
     private Sprite emptySlotSprite;
 
@@ -21,7 +23,21 @@ public class DeckManager : MonoBehaviour
     private const int columns = 13;
     private const int rows = 4;
 
+    // Sprite 이름 → index 맵
+    private Dictionary<string, int> cardNameToIndex = new Dictionary<string, int>();
+
     void Awake()
+    {
+        Instance = this;
+
+        GenerateEmptySlotSprite();
+        BuildCardIndexLookup();
+    }
+
+    // -----------------------------
+    // 빈 슬롯 스프라이트 생성
+    // -----------------------------
+    private void GenerateEmptySlotSprite()
     {
         Texture2D tex = new Texture2D((int)cardWidth, (int)cardHeight);
         Color c = new Color(1f, 1f, 1f, 0.15f);
@@ -32,9 +48,43 @@ public class DeckManager : MonoBehaviour
 
         tex.Apply();
 
-        emptySlotSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        emptySlotSprite = Sprite.Create(tex,
+            new Rect(0, 0, tex.width, tex.height),
+            new Vector2(0.5f, 0.5f));
     }
 
+    // -----------------------------
+    // 카드 이름 → 인덱스 매핑
+    // -----------------------------
+    private void BuildCardIndexLookup()
+    {
+        cardNameToIndex.Clear();
+
+        // cardSprites가 배열이므로 Length 사용
+        for (int i = 0; i < cardManager.cardSprites.Length; i++)
+        {
+            Sprite spr = cardManager.cardSprites[i];
+            if (spr == null) continue;
+
+            string name = spr.name;
+
+            if (!cardNameToIndex.ContainsKey(name))
+                cardNameToIndex[name] = i;
+        }
+    }
+
+    public int GetCardIndexByName(string name)
+    {
+        if (cardNameToIndex.TryGetValue(name, out int idx))
+            return idx;
+
+        Debug.LogWarning($"Unknown card name: {name}");
+        return -1;
+    }
+
+    // -----------------------------
+    // 덱 UI 표시
+    // -----------------------------
     public void ShowRemainingDeck(CardManager cardManager, List<Sprite> usedCards)
     {
         if (deckPanel == null || cardPrefab == null || cardManager == null)
@@ -43,10 +93,8 @@ public class DeckManager : MonoBehaviour
             return;
         }
 
-        // ✔ rtPanel = deckPanel (필수)
         RectTransform rtPanel = deckPanel;
 
-        // 기존 카드 정리
         foreach (Transform child in rtPanel)
             Destroy(child.gameObject);
 
@@ -65,10 +113,11 @@ public class DeckManager : MonoBehaviour
             float x = col * (cardWidth + spacingX);
             float y = -row * (cardHeight + spacingY);
 
-            // ---- 빈 슬롯 ----
+            // 빈 슬롯
             if (usedCards.Contains(s))
             {
-                GameObject blank = new GameObject($"EmptySlot_{i}", typeof(RectTransform), typeof(Image));
+                GameObject blank = new GameObject($"EmptySlot_{i}",
+                    typeof(RectTransform), typeof(Image));
                 blank.transform.SetParent(rtPanel, false);
 
                 RectTransform rtBlank = blank.GetComponent<RectTransform>();
@@ -80,19 +129,18 @@ public class DeckManager : MonoBehaviour
 
                 Image img = blank.GetComponent<Image>();
                 img.sprite = emptySlotSprite;
-                img.color = Color.white;
 
                 continue;
             }
 
-            // ---- 실제 카드 ----
+            // 실제 카드
             GameObject card = Instantiate(cardPrefab, rtPanel);
             Image imgCard = card.GetComponent<Image>();
             RectTransform rtCard = card.GetComponent<RectTransform>();
 
             imgCard.sprite = s;
             rtCard.anchorMin = new Vector2(0, 1);
-            rtCard.anchorMax = new Vector2(0, 1);
+            rtCard.anchorMax = new Vector2(0, 1);   // ❗ 오타 수정
             rtCard.pivot = new Vector2(0, 1);
             rtCard.sizeDelta = new Vector2(cardWidth, cardHeight);
             rtCard.anchoredPosition = new Vector2(x, y);
@@ -102,7 +150,7 @@ public class DeckManager : MonoBehaviour
             deckCards.Add(card);
         }
 
-        Debug.Log($"📚 덱카드 생성 완료! {deckCards.Count}장 (빈칸 포함 {total}칸)");
+        Debug.Log($"📚 덱카드 생성 완료! {deckCards.Count}장 (전체 {total}칸)");
     }
 
     void Start()
@@ -111,18 +159,12 @@ public class DeckManager : MonoBehaviour
         {
             RectTransform rt = deckPanel;
 
-            // anchors 고정
             rt.anchorMin = new Vector2(1, 1);
             rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(1, 1);
 
-            // 위치
             rt.anchoredPosition = new Vector2(-250f, -5f);
-
-            // 크기
             rt.sizeDelta = new Vector2(100f, 100f);
-
-            // 스케일
             rt.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
 

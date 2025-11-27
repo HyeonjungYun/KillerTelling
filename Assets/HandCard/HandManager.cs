@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using TMPro;
 
 public class HandManager : MonoBehaviour
 {
@@ -37,25 +38,19 @@ public class HandManager : MonoBehaviour
         return isExchangeMode;
     }
 
+    // ============================================================
+    // ⭐ JokerDraggable에서 명중한 카드가 들어오는 함수
+    // ============================================================
     public void OnCardSelectedFromDeck(Sprite sprite)
     {
-        if (!isExchangeMode)
-        {
-            Debug.Log("교환 모드가 아니므로 카드 클릭 무시됨");
-            return;
-        }
-
         if (sprite == null)
         {
             Debug.LogError("❌ OnCardSelectedFromDeck: 전달된 Sprite가 NULL!");
             return;
         }
 
-        Debug.Log("🔵 선택된 덱 카드 받음: " + sprite.name);
-
+        Debug.Log("🔵 명중 카드 처리: " + sprite.name);
         SpawnSelectedCard3D(sprite);
-
-        JokerStack3D.Instance.UseOneJoker();
     }
 
     public void SpawnSelectedCard3D(Sprite spr)
@@ -89,12 +84,11 @@ public class HandManager : MonoBehaviour
         Transform tObj = obj.transform;
 
         float xOffset = 0.15f * childCount;
-        float yOffset = 0 * childCount;
 
-        tObj.localPosition = new Vector3(0.5f + xOffset, -6f + yOffset, 0.1f);
-        tObj.localRotation = Quaternion.Euler(0f, 0f, 0f);
+        tObj.localPosition = new Vector3(0.5f + xOffset, -6f, 0.1f);
+        tObj.localRotation = Quaternion.identity;
         tObj.localScale = new Vector3(0.25f, 0.35f, 0.25f);
 
-        Debug.Log("✨ 선택 카드 3D 스폰 완료! (현재 수 = " + (childCount + 1) + ")");
+        Debug.Log("✨ 3D 카드 생성 완료! (총 " + (childCount + 1) + "장)");
     }
 }
