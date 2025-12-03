@@ -10,6 +10,7 @@ public class GoalDeckManager : MonoBehaviour
     public GameObject cardPrefab;
     public CardManager cardManager;
 
+
     [Header("Description Text")]
     public TextMeshProUGUI descriptionText;   // 🔥 추가된 부분
 
@@ -105,8 +106,15 @@ public class GoalDeckManager : MonoBehaviour
         return list;
     }
 
+    public List<Sprite> GetGoalSprites()
+    {
+        return goalSprites;
+    }
+
     public string GetGoalRank()
     {
         return StageGoalRank;
     }
+
+
 }

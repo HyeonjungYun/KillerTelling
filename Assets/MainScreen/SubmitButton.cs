@@ -1,29 +1,33 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 using System.Collections.Generic;
 
 public class SubmitButton : MonoBehaviour
 {
     public Button submitButton;
     public Transform selectedCard3DSpawnPoint;
-
     public GoalDeckManager goalDeckManager;
+    public GameObject resultSlotPrefab;
 
     [Header("Result UI")]
-    public GameObject resultCanvas;               // 🔥 새 결과창
-    public TextMeshProUGUI resultCanvasText;      // 🔥 결과 텍스트
+    public GameObject resultCanvas;
+    public TextMeshProUGUI resultCanvasText;
+
+    [Header("Result Cards")]
+    public Transform playerCardArea;
+    public Transform goalCardArea;
+    public GameObject resultCardPrefab;
 
     private void Start()
     {
         UpdateButtonState();
         submitButton.onClick.AddListener(OnSubmit);
 
-        // 목표덱 자동 연결
         if (goalDeckManager == null)
             goalDeckManager = FindObjectOfType<GoalDeckManager>();
 
-        // 결과창은 시작 시 비활성화
         if (resultCanvas != null)
             resultCanvas.SetActive(false);
     }
@@ -52,37 +56,26 @@ public class SubmitButton : MonoBehaviour
 
         if (count < 2)
         {
-            Debug.Log("❌ 제출 불가: 최소 2장 필요!");
+            Debug.Log("❌ 최소 2장 필요!");
             return;
         }
 
-        Debug.Log("📤 제출 버튼 클릭");
-
-        // --------------------------------
-        // 1) 플레이어 카드 CardData 수집
-        // --------------------------------
         List<CardData> playerDeck = new List<CardData>();
         foreach (Transform t in selectedCard3DSpawnPoint)
         {
-            Card3D card3D = t.GetComponent<Card3D>();
-            if (card3D != null && card3D.cardData != null)
-                playerDeck.Add(card3D.cardData);
+            Card3D c = t.GetComponent<Card3D>();
+            if (c != null && c.cardData != null)
+                playerDeck.Add(c.cardData);
         }
 
-        // --------------------------------
-        // 2) 목표 덱 가져오기
-        // --------------------------------
         if (goalDeckManager == null)
         {
-            Debug.LogError("❌ GoalDeckManager가 SubmitButton에 연결되지 않음!");
+            Debug.LogError("GoalDeckManager 연결 안됨");
             return;
         }
 
         List<CardData> goalDeck = goalDeckManager.GetGoalDeckAsCardData();
 
-        // --------------------------------
-        // 3) 덱 평가
-        // --------------------------------
         string playerRank = DeckEvaluator.EvaluateDeck(playerDeck);
         string goalRank = DeckEvaluator.EvaluateDeck(goalDeck);
 
@@ -91,26 +84,108 @@ public class SubmitButton : MonoBehaviour
 
         bool isClear = playerValue >= goalValue;
 
-        // --------------------------------
-        // 4) 결과 출력 (새 결과창 Canvas)
-        // --------------------------------
         if (resultCanvas != null)
         {
-            resultCanvas.SetActive(true); // 🔥 결과창 활성화
-
+            resultCanvas.SetActive(true);
             resultCanvasText.text =
-                $"<size=50><b>RESULT</b></size>\n\n" +
-                $"<color=white>Player : {playerRank}</color>\n" +
-                $"<color=white>Goal : {goalRank}</color>\n\n" +
-                (isClear
-                    ? "<color=#FFD700><size=55><b>CLEAR!</b></size></color>"
-                    : "<color=red><size=55><b>FAIL</b></size></color>");
+                $"<size=50><b>RESULT</b></size>\n" +
+                $"Player : {playerRank}                   Goal : {goalRank}\n\n\n\n\n\n" +
+                (isClear ? "<color=#FFD700><size=55><b>CLEAR!</b></size></color>"
+                         : "<color=red><size=55><b>FAIL</b></size></color>");
         }
 
-        Debug.Log($"🎮 RESULT → Player:{playerRank}  Goal:{goalRank}  Clear:{isClear}");
+        StartCoroutine(ShowPlayerCards(playerDeck));
+        StartCoroutine(ShowGoalCards(goalDeck));
+    }
+
+    private IEnumerator ShowPlayerCards(List<CardData> deck)
+    {
+        foreach (Transform c in playerCardArea) Destroy(c.gameObject);
+
+        float startX = -300f;
+        float gapX = 60f;
+        float y = 0f;
+
+        List<RectTransform> slotPositions = new List<RectTransform>();
+
+        for (int i = 0; i < 5; i++)
+        {
+            GameObject slot = Instantiate(resultSlotPrefab, playerCardArea);
+            RectTransform rt = slot.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(55f, 75f);
+            rt.anchoredPosition = new Vector2(startX + i * gapX, y);
+
+            slotPositions.Add(rt);
+        }
+
+        for (int i = 0; i < deck.Count; i++)
+        {
+            GameObject card = Instantiate(resultCardPrefab, playerCardArea);
+            RectTransform rt = card.GetComponent<RectTransform>();
+
+            rt.sizeDelta = new Vector2(55f, 75f);
+            rt.anchoredPosition = slotPositions[i].anchoredPosition;
+
+            card.GetComponent<Image>().sprite = deck[i].sprite;
+
+            card.transform.localScale = Vector3.zero;
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime * 4f;
+                card.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, t);
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    private IEnumerator ShowGoalCards(List<CardData> deck)
+    {
+        foreach (Transform c in goalCardArea) Destroy(c.gameObject);
+
+        float startX = 100f;
+        float gapX = 60f;
+        float y = 0f;
+
+        List<RectTransform> slotPositions = new List<RectTransform>();
+
+        for (int i = 0; i < 5; i++)
+        {
+            GameObject slot = Instantiate(resultSlotPrefab, goalCardArea);
+            RectTransform rt = slot.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(55f, 75f);
+            rt.anchoredPosition = new Vector2(startX + i * gapX, y);
+
+            slotPositions.Add(rt);
+        }
+
+        for (int i = 0; i < deck.Count; i++)
+        {
+            GameObject card = Instantiate(resultCardPrefab, goalCardArea);
+            RectTransform rt = card.GetComponent<RectTransform>();
+
+            rt.sizeDelta = new Vector2(55f, 75f);
+            rt.anchoredPosition = slotPositions[i].anchoredPosition;
+
+            card.GetComponent<Image>().sprite = deck[i].sprite;
+
+            card.transform.localScale = Vector3.zero;
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime * 4f;
+                card.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, t);
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(0.1f);
+        }
     }
 }
-
 
 
 
