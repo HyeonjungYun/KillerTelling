@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro; // TextMeshPro 사용 필수
 using UnityEditor.Rendering.PostProcessing;
 using UnityEngine;
+using System;
 
 public class DialogueManager : MonoBehaviour
 {
@@ -23,25 +24,46 @@ public class DialogueManager : MonoBehaviour
     private Queue<string> sentences = new Queue<string>();
     private bool isTyping = false;
 
+    public Action OnDialogueEnded;
+
     void Awake()
     {
         if (instance == null) instance = this;
         dialoguePanel.SetActive(false); // 시작할 땐 꺼둠
     }
 
-    // 외부에서 이 함수를 호출해서 대화 시작
     public void StartDialogue(DialogueData dialogue)
     {
+        // 1. 카메라를 뒤쪽(대화 뷰)으로 회전!
+        ViewManager.instance.SwitchToDialogueMode();
+
+        // 2. 대화 패널 켜기
         dialoguePanel.SetActive(true);
         textName.text = dialogue.speakerName;
 
+        // (데이터 큐 채우기 로직은 그대로 유지...)
         sentences.Clear();
         foreach (string sentence in dialogue.sentences)
         {
             sentences.Enqueue(sentence);
         }
 
-        DisplayNextSentence();
+        // 회전하는 동안 바로 글자가 나오면 어색하니까, 
+        // 카메라가 다 돌아간 뒤(1초 뒤)에 첫 대사가 나오게 딜레이를 줍니다.
+        Invoke("DisplayNextSentence", 1.0f);
+    }
+
+    void EndDialogue()
+    {
+        dialoguePanel.SetActive(false);
+        ViewManager.instance.SwitchToGameMode(); // 카메라 복귀
+
+        // ★★★ 구독자들에게 "대화 끝났어!"라고 알림 ★★★
+        if (OnDialogueEnded != null)
+        {
+            OnDialogueEnded.Invoke();
+            OnDialogueEnded = null; // 한번 쓰고 초기화 (중요: 이전 이벤트가 남지 않게)
+        }
     }
 
     public void DisplayNextSentence()
@@ -107,11 +129,6 @@ public class DialogueManager : MonoBehaviour
         isTyping = false;
 }
 
-    void EndDialogue()
-    {
-        dialoguePanel.SetActive(false);
-        Debug.Log("대화 끝!");
-    }
     void Update()
     {
         // 대화창이 켜져 있을 때만 작동

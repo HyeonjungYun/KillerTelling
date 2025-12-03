@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class CameraRotator : MonoBehaviour
+public class CameraRotatorManager : MonoBehaviour
 {
     public float defaultX = 25f;
     public float focusX = 0f;
