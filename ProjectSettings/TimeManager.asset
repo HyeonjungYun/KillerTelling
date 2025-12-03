@@ -3,13 +3,6 @@
 --- !u!5 &1
 TimeManager:
   m_ObjectHideFlags: 0
-  Fixed Timestep: 0.02
-  serializedVersion: 2
-  Fixed Timestep:
-    m_Count: 1411199
-    m_Rate:
-      m_Denominator: 1
-      m_Numerator: 141120000
   serializedVersion: 2
   Fixed Timestep:
     m_Count: 1411199

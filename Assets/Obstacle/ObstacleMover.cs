@@ -1,29 +1,26 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class ObstacleMover : MonoBehaviour
 {
     [Header("Pendulum Settings")]
-    public float maxAngle = 30f;   // ÃÖ´ë Èçµé¸² °¢µµ
-    public float speed = 2f;       // Èçµé¸®´Â ¼Óµµ
+    public bool enableMovement = true;  // false â†’ ë©ˆì¶¤
+
+    public float maxAngle = 30f;
+    public float speed = 2f;
 
     private float baseZ;
 
     void Start()
     {
-        // ÃÊ±â °¢µµ ÀúÀå
         baseZ = transform.localEulerAngles.z;
     }
 
     void Update()
     {
-        // -maxAngle ~ +maxAngle ¹üÀ§ÀÇ »çÀÎÆÄ °¢µµ
-        float angle = Mathf.Sin(Time.time * speed) * maxAngle;
+        if (!enableMovement)
+            return;  // ğŸ”¥ ì›€ì§ì„ ì™„ì „íˆ ì œê±°ë¨
 
-        // ZÃà È¸Àü Àû¿ë (À­Á¡ °íÁ¤ »óÅÂ¿¡¼­ ¾Æ·¡°¡ ÁøÀÚ ¿îµ¿)
-        transform.localRotation = Quaternion.Euler(
-            0,
-            0,
-            baseZ + angle
-        );
+        float angle = Mathf.Sin(Time.time * speed) * maxAngle;
+        transform.localRotation = Quaternion.Euler(0, 0, baseZ + angle);
     }
 }

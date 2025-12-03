@@ -1,31 +1,59 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 public class CardManager : MonoBehaviour
 {
-    public Sprite[] cardSprites; // 52장 Sprite 전체
+    public Sprite[] cardSprites; // Inspector에서 받는 전체 스프라이트 (백 포함 가능)
     private static CardManager instance;
 
-    private List<int> deck = new List<int>(); // 0~51 번호 덱
+    private List<Sprite> frontSprites = new List<Sprite>(); // 🔥 앞면만 모은 리스트
+    private List<int> deck = new List<int>();
 
     void Awake()
     {
-        // 싱글톤 처리
+        // 싱글톤
         if (instance == null)
             instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
+        else { Destroy(gameObject); return; }
+
+        // 🔥 앞면 스프라이트만 자동 필터
+        frontSprites = cardSprites
+            .Where(spr => IsFrontCard(spr.name))
+            .ToList();
+
+        if (frontSprites.Count != 52)
+            Debug.LogWarning($"⚠ 앞면 카드 수가 이상합니다: {frontSprites.Count}장");
 
         // 덱 초기화
         deck.Clear();
-        for (int i = 0; i < cardSprites.Length; i++)
+        for (int i = 0; i < frontSprites.Count; i++)
             deck.Add(i);
     }
 
-    // 🔥 ① 조원이 만든 기능: 이름으로 카드 스프라이트 찾기
+    // 🔥 카드 이름이 앞면인지 체크하는 규칙 함수
+    private bool IsFrontCard(string name)
+    {
+        // 예: AH, 10D, QS, 3C 형태만 인정
+        if (name.Length < 2 || name.Length > 3)
+            return false;
+
+        string rankPart = name.Length == 3 ? name.Substring(0, 2) : name.Substring(0, 1);
+        string suitPart = name.Substring(name.Length - 1, 1);
+
+        bool validRank =
+            rankPart == "A" ||
+            rankPart == "J" ||
+            rankPart == "Q" ||
+            rankPart == "K" ||
+            int.TryParse(rankPart, out _);
+
+        bool validSuit = suitPart == "S" || suitPart == "H" || suitPart == "D" || suitPart == "C";
+
+        return validRank && validSuit;
+    }
+
+    // 🔥 이름으로 스프라이트 찾기
     public static Sprite GetCardSprite(string suit, int rank)
     {
         string rankStr = rank switch
@@ -37,31 +65,31 @@ public class CardManager : MonoBehaviour
             _ => rank.ToString()
         };
 
-        string key = $"{rankStr}{suit}"; // 예: “QH"
+        string key = $"{rankStr}{suit}";
 
-        foreach (var sprite in instance.cardSprites)
+        foreach (var spr in instance.frontSprites)
         {
-            if (sprite != null && sprite.name == key)
-                return sprite;
+            if (spr.name == key)
+                return spr;
         }
 
         Debug.LogWarning($"❌ 스프라이트 없음: {key}");
         return null;
     }
 
-    // 🔥 ② 네가 만든 기능: 52장 덱에서 랜덤 카드 n장 뽑기
+    // 🔥 덱에서 랜덤 카드 N장 뽑기
     public List<Sprite> DrawRandomCards(int count)
     {
         ShuffleDeck();
 
         List<Sprite> result = new List<Sprite>();
         for (int i = 0; i < count; i++)
-            result.Add(cardSprites[deck[i]]);
+            result.Add(frontSprites[deck[i]]);
 
         return result;
     }
 
-    // 🔥 ③ 덱 셔플
+    // 🔥 셔플
     void ShuffleDeck()
     {
         for (int i = 0; i < deck.Count; i++)

@@ -6,6 +6,8 @@ TagManager:
   tags:
   - BackWall
   - Card
+  - Obstacle
+  - TargetCard
   layers:
   - Default
   - TransparentFX
@@ -13,13 +15,13 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - Obstacle
   - 
   - Card
   - IgnoreCard
   - BackWallLayer
-  - 
-  - 
+  - PostProcessing
+  - Help
   - 
   - 
   - 
