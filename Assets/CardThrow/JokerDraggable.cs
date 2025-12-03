@@ -41,6 +41,12 @@ public class JokerDraggable : MonoBehaviour
     public WallCardPlacer wallPlacer;
     public float cameraReturnDelay = 0.8f;
 
+    // 카메라 줌 컨트롤
+    private CameraZoomToDart camZoom;
+
+    // 이번 조커가 이미 카운트를 깎았는지 여부
+    private bool jokerCountReduced = false;
+
     // ============================================================
     private void Awake()
     {
@@ -61,12 +67,15 @@ public class JokerDraggable : MonoBehaviour
         currentCurvePower = baseCurvePower;
 
         gameObject.layer = LayerMask.NameToLayer("Card");
+
+        if (Camera.main != null)
+            camZoom = Camera.main.GetComponent<CameraZoomToDart>();
     }
 
     private void AutoConfigureCollider()
     {
         boxCol.center = Vector3.zero;
-        boxCol.size = new Vector3(0.4f, 0.01f, 0.6f);
+        boxCol.size = new Vector3(1f, 1.4f, 0.05f);
         boxCol.isTrigger = false;
     }
 
@@ -98,8 +107,15 @@ public class JokerDraggable : MonoBehaviour
         {
             case State.MovingToHand: MoveToHand(); break;
             case State.Aiming: Aiming(); break;
-            case State.Flying: Flying(); break;
+                // Flying 은 FixedUpdate 에서만 처리
         }
+    }
+
+    // Flying 은 고정 시간 간격으로만 업데이트
+    private void FixedUpdate()
+    {
+        if (currentState == State.Flying)
+            Flying();
     }
 
     // ============================================================
@@ -122,6 +138,7 @@ public class JokerDraggable : MonoBehaviour
 
         if (currentState == State.Idle)
         {
+            ReduceJokerOnce();
             currentState = State.MovingToHand;
             return;
         }
@@ -136,6 +153,9 @@ public class JokerDraggable : MonoBehaviour
             lineRen.enabled = true;
 
             transform.rotation = Quaternion.Euler(90, 0, 0);
+
+            if (camZoom != null)
+                camZoom.LockZoom();
         }
     }
 
@@ -176,7 +196,12 @@ public class JokerDraggable : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 6f * Time.deltaTime);
 
         if (Vector3.Distance(transform.position, target) < 0.05f)
+        {
             currentState = State.Selected;
+
+            if (camZoom != null)
+                camZoom.UnlockZoom();
+        }
     }
 
     // ============================================================
@@ -221,13 +246,14 @@ public class JokerDraggable : MonoBehaviour
         DrawTrajectory(transform.position, currentVelocity, currentAcceleration);
     }
 
+    // ============================================================
     private void DrawTrajectory(Vector3 pos, Vector3 vel, Vector3 acc)
     {
-        float dt = 0.02f;
+        float dt = Time.fixedDeltaTime;   // ← 실제 이동과 동일한 고정 시간 간격 사용
         Vector3 p = pos;
         Vector3 v = vel;
 
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < lineRen.positionCount; i++)
         {
             lineRen.SetPosition(i, p);
             p += v * dt;
@@ -238,19 +264,17 @@ public class JokerDraggable : MonoBehaviour
     // ============================================================
     private void Flying()
     {
-        float dt = Time.deltaTime;
+        float dt = Time.fixedDeltaTime;   // ← DrawTrajectory와 동일한 dt
 
         Vector3 nextVel = currentVelocity + currentAcceleration * dt;
         Vector3 nextStep = nextVel * dt;
 
-        // 이동 방향
         Vector3 dir = nextVel.normalized;
 
-        // ⚠ 절대 transform.position만 쓰면 안 되고, 카드 앞면에서 BoxCast 시작
         Vector3 castStart =
             transform.position +
-            transform.up * 0.01f +   // 카드 두께만큼 위로
-            dir * 0.02f;              // 카드 앞쪽
+            transform.up * 0.01f +
+            dir * 0.02f;
 
         float castDist = nextStep.magnitude + 0.1f;
 
@@ -259,9 +283,6 @@ public class JokerDraggable : MonoBehaviour
         Vector3 halfExt = boxCol.size * 0.5f;
         halfExt.Scale(transform.localScale);
 
-        // ================================
-        // 🔥 장애물 충돌 체크
-        // ================================
         if (Physics.BoxCast(
             castStart,
             halfExt,
@@ -271,10 +292,8 @@ public class JokerDraggable : MonoBehaviour
             castDist,
             obstacleMask))
         {
-            // 뒤에서 감지된 경우 무시
             if (Vector3.Dot(dir, obstHit.point - castStart) > 0f)
             {
-                // 🔥 반드시 충돌 지점으로 이동 후 낙하 시작
                 transform.position = obstHit.point - dir * 0.02f;
 
                 StartFalling(nextVel);
@@ -282,9 +301,6 @@ public class JokerDraggable : MonoBehaviour
             }
         }
 
-        // ================================
-        // 🔥 백월 충돌 체크
-        // ================================
         int wallMask = 1 << LayerMask.NameToLayer("BackWallLayer");
 
         if (Physics.Raycast(transform.position, dir, out RaycastHit wallHit,
@@ -293,26 +309,23 @@ public class JokerDraggable : MonoBehaviour
             transform.position = wallHit.point - dir * wallStopOffset;
             currentState = State.Stuck;
 
+            if (camZoom != null)
+                camZoom.UnlockZoom();
+
             TryHitUICard(wallHit.point);
             return;
         }
 
-
-        // ================================
-        // ⭐⭐ 핵심 — 매프레임 반드시 이동 ⭐⭐
-        // ================================
         currentVelocity = nextVel;
         transform.position += nextVel * dt;
 
-        // 회전
         transform.Rotate(0, 0, spinSpeed * dt, Space.Self);
     }
-
 
     // ============================================================
     private IEnumerator DelayedFall()
     {
-        yield return null; // 1프레임 지연 → 조기 튕김 방지
+        yield return null;
         StartFalling(Vector3.zero);
     }
 
@@ -327,7 +340,6 @@ public class JokerDraggable : MonoBehaviour
         Physics.gravity = new Vector3(0, -4f, 0);
 
         Vector3 downward = Vector3.down * 0.8f;
-
         Vector3 smallSide = new Vector3(
             Random.Range(-0.3f, 0.3f),
             0,
@@ -341,6 +353,9 @@ public class JokerDraggable : MonoBehaviour
             Random.Range(-1f, 1f),
             Random.Range(-1f, 1f)
         );
+
+        if (camZoom != null)
+            camZoom.UnlockZoom();
 
         Debug.Log("💥 장애물 충돌 → 자연스러운 낙하 시작");
     }
@@ -368,7 +383,7 @@ public class JokerDraggable : MonoBehaviour
 
         if (best == null || bestDist > 0.2f) return;
 
-        HandManager.Instance.OnCardSelectedFromDeck(best.sprite);
+        HandManager.Instance.OnCardHitByThrow(best.sprite);
         Destroy(best.gameObject);
     }
 
@@ -377,5 +392,21 @@ public class JokerDraggable : MonoBehaviour
         yield return new WaitForSeconds(cameraReturnDelay);
         if (camRotator)
             camRotator.LookDefault();
+    }
+
+    // ============================================================
+    private void ReduceJokerOnce()
+    {
+        if (jokerCountReduced) return;
+        jokerCountReduced = true;
+
+        if (JokerStack3D.Instance != null)
+        {
+            JokerStack3D.Instance.ReduceCountOnly();
+        }
+        else
+        {
+            Debug.LogWarning("JokerDraggable: JokerStack3D.Instance 가 없습니다.");
+        }
     }
 }
