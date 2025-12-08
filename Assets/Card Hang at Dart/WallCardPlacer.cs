@@ -32,60 +32,93 @@ public class WallCardPlacer : MonoBehaviour
         162f    // 10시 방향
     };
 
+    /// <summary>
+    /// 과녁에 카드 걸기 (Renew 등에서 호출)
+    /// </summary>
     public void PlaceCards(List<Sprite> sprites)
     {
         if (targetArea == null || cardUiPrefab == null)
         {
-            Debug.LogError("WallCardPlacer: 설정 오류");
+            Debug.LogError("WallCardPlacer: TargetArea 또는 CardUiPrefab 미지정");
             return;
         }
 
-        // -------------------------------
-        // 🔥 기존 과녁 카드 삭제되되 과녁 배경은 삭제 금지
-        // -------------------------------
+        // ------------------------------------------------------
+        // 1. 기존 과녁 카드 삭제 (배경 DartBoard는 남겨둠)
+        // ------------------------------------------------------
         for (int i = targetArea.childCount - 1; i >= 0; i--)
         {
             Transform child = targetArea.GetChild(i);
 
-            // 💥 과녁 배경 제거 방지
+            // 과녁 배경은 이름으로 필터링해서 삭제하지 않음
             if (child.name.Contains("Back") ||
                 child.name.Contains("back") ||
                 child.name.Contains("Board") ||
                 child.name.Contains("Dart") ||
                 child.name.Contains("Background"))
+            {
                 continue;
+            }
 
             Destroy(child.gameObject);
         }
 
-        // -------------------------------
-        // 🔥 5개 슬롯 고정 배치
-        // -------------------------------
+        // ------------------------------------------------------
+        // 2. 새 카드 배치 (최대 5장, 슬롯 각도 고정)
+        // ------------------------------------------------------
         int count = Mathf.Min(sprites.Count, slotAngles.Length);
 
         for (int i = 0; i < count; i++)
         {
-            float ang = slotAngles[i] * Mathf.Deg2Rad;
+            float angRad = slotAngles[i] * Mathf.Deg2Rad;
 
-            Vector2 pos = new Vector2(
-                Mathf.Cos(ang) * radius,
-                Mathf.Sin(ang) * radius
+            Vector2 localPos = new Vector2(
+                Mathf.Cos(angRad) * radius,
+                Mathf.Sin(angRad) * radius
             );
 
+            // UI 카드 생성
             GameObject obj = Instantiate(cardUiPrefab, targetArea);
+
+            // 스프라이트 지정
             Image img = obj.GetComponent<Image>();
-            img.sprite = sprites[i];
+            if (img != null)
+            {
+                img.sprite = sprites[i];
+                img.raycastTarget = true;     // Hover용 이벤트 받도록 보장
+            }
 
             RectTransform rt = obj.GetComponent<RectTransform>();
-            rt.anchoredPosition = pos + new Vector2(offsetX, offsetY);
+            if (rt != null)
+            {
+                // 중심 기준 원형 배치 + 오프셋
+                rt.anchoredPosition = localPos + new Vector2(offsetX, offsetY);
 
-            float rot = Random.Range(-randomRotRange, randomRotRange);
-            rt.localRotation = Quaternion.Euler(0, 0, rot);
+                // 살짝 랜덤 회전
+                float rot = Random.Range(-randomRotRange, randomRotRange);
+                rt.localRotation = Quaternion.Euler(0f, 0f, rot);
 
-            float scale = baseScale + Random.Range(-randomScaleRange, randomScaleRange);
-            rt.localScale = new Vector3(scale, scale, 1);
+                // 살짝 랜덤 스케일
+                float scale = baseScale + Random.Range(-randomScaleRange, randomScaleRange);
+                rt.localScale = new Vector3(scale, scale, 1f);
 
-            rt.localPosition = new Vector3(rt.localPosition.x, rt.localPosition.y, -0.01f);
+                // z 살짝 앞으로(배경보다 앞) + 카드끼리 약간씩 차이
+                rt.localPosition = new Vector3(
+                    rt.localPosition.x,
+                    rt.localPosition.y,
+                    0.02f + 0.001f * i
+                );
+            }
+
+            // --------------------------------------------------
+            // 3. Hover 컴포넌트 자동 부착 (우측 덱과는 분리된 전용 스크립트)
+            // --------------------------------------------------
+            if (!obj.TryGetComponent<TargetCardHover>(out _))
+            {
+                obj.AddComponent<TargetCardHover>();
+            }
         }
+
+        Debug.Log($"🎯 WallCardPlacer → 과녁에 카드 {count}장 배치 완료");
     }
 }

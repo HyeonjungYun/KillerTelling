@@ -264,11 +264,10 @@ public class JokerDraggable : MonoBehaviour
     // ============================================================
     private void Flying()
     {
-        float dt = Time.fixedDeltaTime;   // ← DrawTrajectory와 동일한 dt
+        float dt = Time.fixedDeltaTime;
 
         Vector3 nextVel = currentVelocity + currentAcceleration * dt;
         Vector3 nextStep = nextVel * dt;
-
         Vector3 dir = nextVel.normalized;
 
         Vector3 castStart =
@@ -278,49 +277,71 @@ public class JokerDraggable : MonoBehaviour
 
         float castDist = nextStep.magnitude + 0.1f;
 
+        // ==============================
+        // 1) 장애물 BoxCast (Layer = Obstacle, Non-Trigger)
+        // ==============================
         int obstacleMask = 1 << LayerMask.NameToLayer("Obstacle");
 
         Vector3 halfExt = boxCol.size * 0.5f;
         halfExt.Scale(transform.localScale);
 
         if (Physics.BoxCast(
-            castStart,
-            halfExt,
-            dir,
-            out RaycastHit obstHit,
-            transform.rotation,
-            castDist,
-            obstacleMask))
+                castStart,
+                halfExt,
+                dir,
+                out RaycastHit obstHit,
+                transform.rotation,
+                castDist,
+                obstacleMask,
+                QueryTriggerInteraction.Ignore))
         {
             if (Vector3.Dot(dir, obstHit.point - castStart) > 0f)
             {
-                transform.position = obstHit.point - dir * 0.02f;
+                Debug.Log($"[Joker] Obstacle Hit → {obstHit.collider.name} " +
+                          $"Layer={LayerMask.LayerToName(obstHit.collider.gameObject.layer)} " +
+                          $"Tag={obstHit.collider.tag}");
 
+                transform.position = obstHit.point - dir * 0.02f;
                 StartFalling(nextVel);
                 return;
             }
         }
 
+        // ==============================
+        // 2) 보드 Raycast (Layer = BackWallLayer, Tag = BackWall)
+        // ==============================
         int wallMask = 1 << LayerMask.NameToLayer("BackWallLayer");
 
-        if (Physics.Raycast(transform.position, dir, out RaycastHit wallHit,
-            castDist, wallMask))
+        if (Physics.Raycast(
+                castStart,
+                dir,
+                out RaycastHit wallHit,
+                castDist,
+                wallMask,
+                QueryTriggerInteraction.Ignore))
         {
-            transform.position = wallHit.point - dir * wallStopOffset;
-            currentState = State.Stuck;
+            if (wallHit.collider.CompareTag("BackWall"))
+            {
+                transform.position = wallHit.point - dir * wallStopOffset;
+                currentState = State.Stuck;
 
-            if (camZoom != null)
-                camZoom.UnlockZoom();
+                if (camZoom != null)
+                    camZoom.UnlockZoom();
 
-            TryHitUICard(wallHit.point);
-            return;
+                TryHitUICard(wallHit.point);
+                return;
+            }
         }
 
+        // ==============================
+        // 3) 아무 것도 안 맞았을 때
+        // ==============================
         currentVelocity = nextVel;
         transform.position += nextVel * dt;
-
         transform.Rotate(0, 0, spinSpeed * dt, Space.Self);
     }
+
+
 
     // ============================================================
     private IEnumerator DelayedFall()
@@ -365,14 +386,34 @@ public class JokerDraggable : MonoBehaviour
     {
         if (!wallPlacer || !wallPlacer.targetArea) return;
 
-        float bestDist = float.MaxValue;
+        Camera uiCam = Camera.main;
+        Vector2 screenPoint = uiCam.WorldToScreenPoint(hitPos);
+
         Image best = null;
+        float bestDist = float.MaxValue;
 
         foreach (Transform child in wallPlacer.targetArea)
         {
+            // 🔴 과녁판 / 배경 오브젝트는 후보에서 제외
+            string nm = child.name;
+            if (nm.Contains("Back") ||
+                nm.Contains("back") ||
+                nm.Contains("Board") ||
+                nm.Contains("Dart") ||
+                nm.Contains("Background"))
+                continue;
+
             if (!child.TryGetComponent(out Image img)) continue;
             if (!img.sprite) continue;
 
+            RectTransform rt = child as RectTransform;
+            if (rt == null) continue;
+
+            // 💥 화면 좌표가 이 카드 사각형 안에 들어왔는지
+            if (!RectTransformUtility.RectangleContainsScreenPoint(rt, screenPoint, uiCam))
+                continue;
+
+            // 겹쳐 있는 경우를 대비해서 가장 가까운 카드 1장만 선택
             float d = Vector3.Distance(hitPos, child.position);
             if (d < bestDist)
             {
@@ -381,8 +422,9 @@ public class JokerDraggable : MonoBehaviour
             }
         }
 
-        if (best == null || bestDist > 0.2f) return;
+        if (best == null) return;
 
+        // ✅ 실제 카드만 패로 이동
         HandManager.Instance.OnCardHitByThrow(best.sprite);
         Destroy(best.gameObject);
     }

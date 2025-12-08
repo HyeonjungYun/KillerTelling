@@ -18,6 +18,11 @@ public class CardGraveyardManager : MonoBehaviour
     public MovingTargetObstacle movingTarget;      // 보스 과녁판
     public ChainPendulum chainPendulum;            // ♥ 3장 이상 → 체인 진자 장애물
 
+    [Header("Drink")]
+    public EnergyDrinkMover energyDrinkMover;      // ♦ 4장 이상 → 음료캔 연출
+
+    private bool drinkPlayed = false;              // 음료 연출이 이미 한 번 재생됐는지
+
     private List<Sprite> storedCards = new List<Sprite>();
     public List<Sprite> StoredSprites => storedCards;
 
@@ -89,7 +94,7 @@ public class CardGraveyardManager : MonoBehaviour
             }
         }
 
-        // 장애물 체크
+        // 장애물/연출 체크
         CheckObstacleActivation(suitGroups);
 
         // UI 카운터 업데이트
@@ -130,34 +135,25 @@ public class CardGraveyardManager : MonoBehaviour
         }
 
         // ---------------------------------------------------------
-        // 💖 새로운 장애물 : 체인 펜듈럼 (heart >= 3)
-        // ---------------------------------------------------------
-        // ---------------------------------------------------------
-        // ♥ 3장 이상 → Chain 등장 + 위치 변경 + 진자 활성화
+        // 체인 펜듈럼 (heart >= 3)
         // ---------------------------------------------------------
         if (chainPendulum != null)
         {
             if (heart >= 3)
             {
-                // 위치 변경
                 chainPendulum.transform.localPosition = new Vector3(0f, 6f, 0.3f);
                 chainPendulum.transform.localEulerAngles = new Vector3(0f, 0f, -19.394f);
                 chainPendulum.transform.localScale = new Vector3(2f, 1f, 2f);
-
-                // 활성화
                 chainPendulum.SetActive(true);
             }
             else
             {
-                // 초기 상태 복귀
                 chainPendulum.transform.localPosition = new Vector3(2f, 1f, -3f);
                 chainPendulum.transform.localEulerAngles = new Vector3(90f, 0f, 0f);
                 chainPendulum.transform.localScale = new Vector3(2f, 0.6f, 2f);
-
                 chainPendulum.SetActive(false);
             }
         }
-
 
         // ---------------------------------------------------------
         // 신규 총 장애물 (spade >= 3)
@@ -166,7 +162,7 @@ public class CardGraveyardManager : MonoBehaviour
             shotgunObstacle.SetActiveState(spade >= 3);
 
         // ---------------------------------------------------------
-        // ⭐ 보스 장애물 : 회전 과녁판
+        // 보스 장애물 : 회전 과녁판
         // 조건: ♠4 + ♦3 + ♥2 + ♣2
         // ---------------------------------------------------------
         bool bossCondition =
@@ -177,6 +173,15 @@ public class CardGraveyardManager : MonoBehaviour
 
         if (movingTarget != null)
             movingTarget.active = bossCondition;
+
+        // ---------------------------------------------------------
+        // 음료캔 연출 : 다이아몬드 4장 이상
+        // ---------------------------------------------------------
+        if (!drinkPlayed && diamond >= 4 && energyDrinkMover != null)
+        {
+            drinkPlayed = true;
+            energyDrinkMover.PlayDrinkOnce();
+        }
     }
 
     // ===========================================================
