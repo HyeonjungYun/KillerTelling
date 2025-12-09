@@ -21,7 +21,7 @@ public class CardGraveyardManager : MonoBehaviour
     [Header("Drink")]
     public EnergyDrinkMover energyDrinkMover;      // ♦ 4장 이상 → 음료캔 연출
 
-    private bool drinkPlayed = false;              // 음료 연출이 이미 한 번 재생됐는지
+    private bool drinkPlayed = false;
 
     private List<Sprite> storedCards = new List<Sprite>();
     public List<Sprite> StoredSprites => storedCards;
@@ -42,11 +42,9 @@ public class CardGraveyardManager : MonoBehaviour
     // ===========================================================
     private void UpdateGraveyardUI()
     {
-        // 기존 카드 삭제
         foreach (Transform child in graveyardArea)
             Destroy(child.gameObject);
 
-        // 무늬별 분류
         Dictionary<char, List<Sprite>> suitGroups = new Dictionary<char, List<Sprite>>()
         {
             { 'S', new List<Sprite>() },
@@ -61,7 +59,6 @@ public class CardGraveyardManager : MonoBehaviour
             suitGroups[suit].Add(spr);
         }
 
-        // 카드 무덤 시각화
         float stackStartX = -1.5f;
         float stackSpacingX = 1.3f;
         float cardOffsetY = 0.04f;
@@ -94,10 +91,7 @@ public class CardGraveyardManager : MonoBehaviour
             }
         }
 
-        // 장애물/연출 체크
         CheckObstacleActivation(suitGroups);
-
-        // UI 카운터 업데이트
         UpdateGraveyardCounterText(suitGroups);
     }
 
@@ -123,9 +117,6 @@ public class CardGraveyardManager : MonoBehaviour
         int diamond = suitGroups['D'].Count;
         int club = suitGroups['C'].Count;
 
-        // ---------------------------------------------------------
-        // 기존 막대 장애물 (heart >= 3)
-        // ---------------------------------------------------------
         GameObject obstacleRoot = GameObject.Find("ObstacleMover");
         if (obstacleRoot != null)
         {
@@ -134,9 +125,6 @@ public class CardGraveyardManager : MonoBehaviour
                 mesh.gameObject.SetActive(heart >= 3);
         }
 
-        // ---------------------------------------------------------
-        // 체인 펜듈럼 (heart >= 3)
-        // ---------------------------------------------------------
         if (chainPendulum != null)
         {
             if (heart >= 3)
@@ -155,16 +143,9 @@ public class CardGraveyardManager : MonoBehaviour
             }
         }
 
-        // ---------------------------------------------------------
-        // 신규 총 장애물 (spade >= 3)
-        // ---------------------------------------------------------
         if (shotgunObstacle != null)
             shotgunObstacle.SetActiveState(spade >= 3);
 
-        // ---------------------------------------------------------
-        // 보스 장애물 : 회전 과녁판
-        // 조건: ♠4 + ♦3 + ♥2 + ♣2
-        // ---------------------------------------------------------
         bool bossCondition =
             spade >= 4 &&
             diamond >= 3 &&
@@ -174,9 +155,7 @@ public class CardGraveyardManager : MonoBehaviour
         if (movingTarget != null)
             movingTarget.active = bossCondition;
 
-        // ---------------------------------------------------------
         // 음료캔 연출 : 다이아몬드 4장 이상
-        // ---------------------------------------------------------
         if (!drinkPlayed && diamond >= 4 && energyDrinkMover != null)
         {
             drinkPlayed = true;
@@ -196,5 +175,14 @@ public class CardGraveyardManager : MonoBehaviour
 
         Debug.LogWarning("Unknown suit in sprite: " + spriteName);
         return 'S';
+    }
+
+    // ============================================================
+    // 🔥 스테이지 전환 시 → 무덤은 그대로, UI/장애물 상태만 다시 계산하고 싶을 때
+    // ============================================================
+    public void OnStageChanged_KeepState()
+    {
+        UpdateGraveyardUI();
+        Debug.Log("♻ [CardGraveyardManager] 스테이지 변경 → 무덤 상태 유지 + UI/장애물 재적용");
     }
 }

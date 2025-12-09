@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic;
 
 public class WallCardPlacer : MonoBehaviour
 {
@@ -33,7 +33,35 @@ public class WallCardPlacer : MonoBehaviour
     };
 
     /// <summary>
-    /// 과녁에 카드 걸기 (Renew 등에서 호출)
+    /// 스테이지 전환 시 사용.
+    /// - 과녁에 붙어 있던 카드 UI만 삭제
+    /// - DartBoard / Background 이미지는 그대로 유지
+    /// - 카드 무덤으로는 보내지 않음
+    /// </summary>
+    public void ClearTargetAreaOnly()
+    {
+        if (targetArea == null) return;
+
+        for (int i = targetArea.childCount - 1; i >= 0; i--)
+        {
+            Transform child = targetArea.GetChild(i);
+
+            // 과녁 배경은 유지
+            if (child.name.Contains("Back") ||
+                child.name.Contains("back") ||
+                child.name.Contains("Board") ||
+                child.name.Contains("Dart") ||
+                child.name.Contains("Background"))
+                continue;
+
+            Destroy(child.gameObject);
+        }
+
+        Debug.Log("🧹 [WallCardPlacer] 스테이지 전환용 과녁 카드만 정리 완료");
+    }
+
+    /// <summary>
+    /// 과녁에 카드 걸기 (Renew, 스테이지 초기 세팅 등에서 호출)
     /// </summary>
     public void PlaceCards(List<Sprite> sprites)
     {
@@ -45,23 +73,9 @@ public class WallCardPlacer : MonoBehaviour
 
         // ------------------------------------------------------
         // 1. 기존 과녁 카드 삭제 (배경 DartBoard는 남겨둠)
+        //    (Renew에서 부를 때는 이미 MoveOldCardsToGraveyard가 먼저 실행됨)
         // ------------------------------------------------------
-        for (int i = targetArea.childCount - 1; i >= 0; i--)
-        {
-            Transform child = targetArea.GetChild(i);
-
-            // 과녁 배경은 이름으로 필터링해서 삭제하지 않음
-            if (child.name.Contains("Back") ||
-                child.name.Contains("back") ||
-                child.name.Contains("Board") ||
-                child.name.Contains("Dart") ||
-                child.name.Contains("Background"))
-            {
-                continue;
-            }
-
-            Destroy(child.gameObject);
-        }
+        ClearTargetAreaOnly();
 
         // ------------------------------------------------------
         // 2. 새 카드 배치 (최대 5장, 슬롯 각도 고정)
@@ -77,7 +91,6 @@ public class WallCardPlacer : MonoBehaviour
                 Mathf.Sin(angRad) * radius
             );
 
-            // UI 카드 생성
             GameObject obj = Instantiate(cardUiPrefab, targetArea);
 
             // 스프라이트 지정
@@ -85,24 +98,20 @@ public class WallCardPlacer : MonoBehaviour
             if (img != null)
             {
                 img.sprite = sprites[i];
-                img.raycastTarget = true;     // Hover용 이벤트 받도록 보장
+                img.raycastTarget = true;     // Hover, 클릭 등 이벤트 받기
             }
 
             RectTransform rt = obj.GetComponent<RectTransform>();
             if (rt != null)
             {
-                // 중심 기준 원형 배치 + 오프셋
                 rt.anchoredPosition = localPos + new Vector2(offsetX, offsetY);
 
-                // 살짝 랜덤 회전
                 float rot = Random.Range(-randomRotRange, randomRotRange);
                 rt.localRotation = Quaternion.Euler(0f, 0f, rot);
 
-                // 살짝 랜덤 스케일
                 float scale = baseScale + Random.Range(-randomScaleRange, randomScaleRange);
                 rt.localScale = new Vector3(scale, scale, 1f);
 
-                // z 살짝 앞으로(배경보다 앞) + 카드끼리 약간씩 차이
                 rt.localPosition = new Vector3(
                     rt.localPosition.x,
                     rt.localPosition.y,
@@ -110,15 +119,13 @@ public class WallCardPlacer : MonoBehaviour
                 );
             }
 
-            // --------------------------------------------------
-            // 3. Hover 컴포넌트 자동 부착 (우측 덱과는 분리된 전용 스크립트)
-            // --------------------------------------------------
+            // Hover 컴포넌트 자동 부착
             if (!obj.TryGetComponent<TargetCardHover>(out _))
             {
                 obj.AddComponent<TargetCardHover>();
             }
         }
 
-        Debug.Log($"🎯 WallCardPlacer → 과녁에 카드 {count}장 배치 완료");
+        Debug.Log($"🎯 [WallCardPlacer] 과녁에 카드 {count}장 배치 완료");
     }
 }

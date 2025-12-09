@@ -6,6 +6,9 @@ using System.Collections;
 [RequireComponent(typeof(LineRenderer))]
 public class JokerDraggable : MonoBehaviour
 {
+    // 🔥 현재 손에 들고(조준/투척 모드) 있는 조커를 가리키는 정적 참조
+    public static JokerDraggable ActiveJoker = null;
+
     private Camera cam;
     private Rigidbody rb;
     private BoxCollider boxCol;
@@ -44,7 +47,7 @@ public class JokerDraggable : MonoBehaviour
     // 카메라 줌 컨트롤
     private CameraZoomToDart camZoom;
 
-    // 이번 조커가 이미 카운트를 깎았는지 여부
+    // 이번 조커가 이미 카운트를 깎았는지 여부 (한 번만 감소)
     private bool jokerCountReduced = false;
 
     // ============================================================
@@ -107,11 +110,10 @@ public class JokerDraggable : MonoBehaviour
         {
             case State.MovingToHand: MoveToHand(); break;
             case State.Aiming: Aiming(); break;
-                // Flying 은 FixedUpdate 에서만 처리
+                // Flying 은 FixedUpdate에서만 처리
         }
     }
 
-    // Flying 은 고정 시간 간격으로만 업데이트
     private void FixedUpdate()
     {
         if (currentState == State.Flying)
@@ -136,13 +138,24 @@ public class JokerDraggable : MonoBehaviour
         if (camRotator)
             camRotator.LookFront();
 
+        // 🔥 Idle 상태에서 처음 클릭 → 손에 들기 시작
         if (currentState == State.Idle)
         {
-            ReduceJokerOnce();
+            // 현재 들고 있는 조커로 등록
+            ActiveJoker = this;
+
+            // 👉 테이블 스택 리스트에서 이 조커 제거
+            if (JokerStack3D.Instance != null)
+                JokerStack3D.Instance.Notify_JokerPicked(transform);
+
+            // ❌ 예전에는 여기서 ReduceJokerOnce() 를 호출했음
+            //    이제는 "실제 던질 때"만 카운트 감소하므로 제거
+
             currentState = State.MovingToHand;
             return;
         }
 
+        // 손으로 가져온 뒤 다시 클릭 → 조준 시작
         if (currentState == State.Selected)
         {
             currentState = State.Aiming;
@@ -207,8 +220,12 @@ public class JokerDraggable : MonoBehaviour
     // ============================================================
     private void Aiming()
     {
+        // 🔥 실제 "던지는" 시점: 마우스에서 손을 뗀 순간
         if (Input.GetMouseButtonUp(0))
         {
+            // 👉 이제 여기서만 조커 카운트를 1번 감소
+            ReduceJokerOnce();
+
             currentState = State.Flying;
             lineRen.enabled = false;
 
@@ -235,9 +252,15 @@ public class JokerDraggable : MonoBehaviour
 
         switch (currentTrajectory)
         {
-            case TrajectoryType.Straight: currentAcceleration = Vector3.zero; break;
-            case TrajectoryType.CurveRight: currentAcceleration = rightVec * currentCurvePower; break;
-            case TrajectoryType.CurveLeft: currentAcceleration = -rightVec * currentCurvePower; break;
+            case TrajectoryType.Straight:
+                currentAcceleration = Vector3.zero;
+                break;
+            case TrajectoryType.CurveRight:
+                currentAcceleration = rightVec * currentCurvePower;
+                break;
+            case TrajectoryType.CurveLeft:
+                currentAcceleration = -rightVec * currentCurvePower;
+                break;
         }
 
         float estTime = 10f / throwPower;
@@ -249,7 +272,7 @@ public class JokerDraggable : MonoBehaviour
     // ============================================================
     private void DrawTrajectory(Vector3 pos, Vector3 vel, Vector3 acc)
     {
-        float dt = Time.fixedDeltaTime;   // ← 실제 이동과 동일한 고정 시간 간격 사용
+        float dt = Time.fixedDeltaTime;
         Vector3 p = pos;
         Vector3 v = vel;
 
@@ -277,9 +300,7 @@ public class JokerDraggable : MonoBehaviour
 
         float castDist = nextStep.magnitude + 0.1f;
 
-        // ==============================
-        // 1) 장애물 BoxCast (Layer = Obstacle, Non-Trigger)
-        // ==============================
+        // 1) 장애물 BoxCast
         int obstacleMask = 1 << LayerMask.NameToLayer("Obstacle");
 
         Vector3 halfExt = boxCol.size * 0.5f;
@@ -307,9 +328,7 @@ public class JokerDraggable : MonoBehaviour
             }
         }
 
-        // ==============================
-        // 2) 보드 Raycast (Layer = BackWallLayer, Tag = BackWall)
-        // ==============================
+        // 2) 과녁 보드 Raycast
         int wallMask = 1 << LayerMask.NameToLayer("BackWallLayer");
 
         if (Physics.Raycast(
@@ -325,6 +344,8 @@ public class JokerDraggable : MonoBehaviour
                 transform.position = wallHit.point - dir * wallStopOffset;
                 currentState = State.Stuck;
 
+                ClearActiveIfSelf();
+
                 if (camZoom != null)
                     camZoom.UnlockZoom();
 
@@ -333,15 +354,11 @@ public class JokerDraggable : MonoBehaviour
             }
         }
 
-        // ==============================
         // 3) 아무 것도 안 맞았을 때
-        // ==============================
         currentVelocity = nextVel;
         transform.position += nextVel * dt;
         transform.Rotate(0, 0, spinSpeed * dt, Space.Self);
     }
-
-
 
     // ============================================================
     private IEnumerator DelayedFall()
@@ -354,6 +371,8 @@ public class JokerDraggable : MonoBehaviour
     {
         currentState = State.Stuck;
         spinSpeed = 0f;
+
+        ClearActiveIfSelf();
 
         rb.isKinematic = false;
         rb.useGravity = true;
@@ -394,7 +413,6 @@ public class JokerDraggable : MonoBehaviour
 
         foreach (Transform child in wallPlacer.targetArea)
         {
-            // 🔴 과녁판 / 배경 오브젝트는 후보에서 제외
             string nm = child.name;
             if (nm.Contains("Back") ||
                 nm.Contains("back") ||
@@ -409,11 +427,9 @@ public class JokerDraggable : MonoBehaviour
             RectTransform rt = child as RectTransform;
             if (rt == null) continue;
 
-            // 💥 화면 좌표가 이 카드 사각형 안에 들어왔는지
             if (!RectTransformUtility.RectangleContainsScreenPoint(rt, screenPoint, uiCam))
                 continue;
 
-            // 겹쳐 있는 경우를 대비해서 가장 가까운 카드 1장만 선택
             float d = Vector3.Distance(hitPos, child.position);
             if (d < bestDist)
             {
@@ -424,7 +440,6 @@ public class JokerDraggable : MonoBehaviour
 
         if (best == null) return;
 
-        // ✅ 실제 카드만 패로 이동
         HandManager.Instance.OnCardHitByThrow(best.sprite);
         Destroy(best.gameObject);
     }
@@ -437,6 +452,8 @@ public class JokerDraggable : MonoBehaviour
     }
 
     // ============================================================
+    // 카운트 감소는 "실제 던질 때" 한 번만
+    // ============================================================
     private void ReduceJokerOnce()
     {
         if (jokerCountReduced) return;
@@ -444,11 +461,30 @@ public class JokerDraggable : MonoBehaviour
 
         if (JokerStack3D.Instance != null)
         {
-            JokerStack3D.Instance.ReduceCountOnly();
+            JokerStack3D.Instance.ReduceCountOnly();   // 🔹 분자(current)만 감소, 영구 수는 그대로
         }
         else
         {
             Debug.LogWarning("JokerDraggable: JokerStack3D.Instance 가 없습니다.");
+        }
+    }
+
+    // ============================================================
+    // ActiveJoker 유틸
+    // ============================================================
+    private void ClearActiveIfSelf()
+    {
+        if (ActiveJoker == this)
+            ActiveJoker = null;
+    }
+
+    public static void DestroyActiveJokerImmediately()
+    {
+        if (ActiveJoker != null)
+        {
+            GameObject obj = ActiveJoker.gameObject;
+            ActiveJoker = null;
+            Object.Destroy(obj);
         }
     }
 }

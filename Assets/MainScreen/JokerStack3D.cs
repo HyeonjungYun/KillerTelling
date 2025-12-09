@@ -1,15 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
 
 public class JokerStack3D : MonoBehaviour
 {
     public static JokerStack3D Instance;
 
-    // ⭐ 전체 게임에서 공유되는 “최대 조커 수”
-    //   - 첫 스테이지에서 한 번 초기화
-    //   - 덱에서 조커를 사용하면 감소, 다음 스테이지에도 이어짐
+    // 🔹 전체 게임에서 공유되는 “영구 조커 수”(분모의 기준)
     private static int globalMaxJokers = -1;
 
     private void Awake()
@@ -22,7 +20,7 @@ public class JokerStack3D : MonoBehaviour
     public Sprite jokerSprite;
 
     [Header("Settings")]
-    public int jokerCount = 7;   // 인스펙터에 적어두는 “기본 최대 조커 수”
+    public int jokerCount = 7;   // 인스펙터 기본값(1스테이지 최대 수)
 
     [Header("Positions")]
     public Vector3 firstCardPosition;
@@ -32,28 +30,46 @@ public class JokerStack3D : MonoBehaviour
     public float offsetY = 0.0f;
 
     [Header("UI")]
-    public TextMeshPro jokerCountText;   // 3D 텍스트
+    public TextMeshPro jokerCountText;   // 3D 텍스트 (예: 6/6)
 
-    private int currentJoker;            // 현재 남은 조커(분자)
-    private List<Transform> spawnedJokers = new List<Transform>();
+    // 🔹 현재 스테이지에서 남은 조커 수(분자)
+    private int currentJoker;
+
+    // 🔹 테이블 위에 “아직 사용 안 한” 조커 오브젝트들
+    private readonly List<Transform> spawnedJokers = new List<Transform>();
 
     // ================================================================
     void Start()
     {
-        // ⭐ 첫 진입이면 인스펙터 값으로 초기화, 그 이후 씬에서는 이전 값 유지
-        if (globalMaxJokers < 0)
-        {
-            globalMaxJokers = jokerCount;
-        }
-        else
-        {
-            jokerCount = globalMaxJokers;
-        }
+        InitStageFromGlobal();
+    }
 
-        currentJoker = jokerCount;
+    // 스테이지 시작 시 공통 초기화
+    private void InitStageFromGlobal()
+    {
+        // 최초 진입이면 인스펙터 값으로 전역 초기화
+        if (globalMaxJokers < 0)
+            globalMaxJokers = jokerCount;
+
+        // 이후엔 전역에서 가져옴
+        jokerCount = globalMaxJokers;   // 분모
+        currentJoker = jokerCount;        // 분자(처음엔 같음)
+
+        // 이전 스택 정리
+        foreach (var t in spawnedJokers)
+            if (t != null) Destroy(t.gameObject);
+        spawnedJokers.Clear();
+        StopAllCoroutines();
 
         UpdateJokerText();
         StartCoroutine(SpawnJokerStackAnimated());
+        Debug.Log($"🃏 [JokerStack3D] 스테이지 시작 → {currentJoker}/{jokerCount}");
+    }
+
+    // StageManager에서 호출
+    public void OnStageStart()
+    {
+        InitStageFromGlobal();
     }
 
     // ================================================================
@@ -64,38 +80,54 @@ public class JokerStack3D : MonoBehaviour
     }
 
     // ================================================================
-    // 덱 선택 → 조커 1개 "영구 소모" + 스택에서 제거
+    // ① 덱에서 카드 선택 → 조커 1개 “영구 소모”
+    //    - 던지기 모드라면 손에 들고 있던 조커를 소비
+    //    - 아니라면 테이블 스택에서 1장 소비
+    //    - 규칙: currentJoker--, jokerCount--, globalMaxJokers--
     // ================================================================
     public void UseOneJoker()
     {
-        if (spawnedJokers.Count == 0 || jokerCount <= 0)
+        if (jokerCount <= 0)
         {
-            Debug.LogWarning("⚠ 더 이상 소모할 조커가 없습니다!");
+            Debug.LogWarning("⚠ 더 이상 소모할 조커가 없습니다! (UseOneJoker)");
             return;
         }
 
-        // 실제 스택 제일 위(또는 앞) 카드 제거
-        Transform first = spawnedJokers[0];
-        spawnedJokers.RemoveAt(0);
-        Destroy(first.gameObject);
+        // 1) 던지기 모드에서 이미 손에 들고 있는 조커가 있다면 → 그걸 삭제
+        if (JokerDraggable.ActiveJoker != null)
+        {
+            var active = JokerDraggable.ActiveJoker;
+            Notify_JokerPicked(active.transform);  // 혹시 리스트에 남아있으면 제거
+            Destroy(active.gameObject);
+            JokerDraggable.ActiveJoker = null;
+        }
+        else
+        {
+            // 2) 손에 들고 있는 조커가 없다면 → 테이블 위 스택에서 1장 제거
+            if (spawnedJokers.Count > 0)
+            {
+                Transform t = spawnedJokers[0];
+                spawnedJokers.RemoveAt(0);
+                if (t != null) Destroy(t.gameObject);
+            }
+        }
 
-        // 남은 조커(분자) 감소
-        currentJoker = Mathf.Max(0, currentJoker - 1);
+        // 실제 개수 감소
+        currentJoker = Mathf.Max(0, currentJoker - 1);  // 분자
+        jokerCount = Mathf.Max(0, jokerCount - 1);  // 분모
+        globalMaxJokers = jokerCount;
 
-        // 전체 최대 조커 수(분모)도 감소 → 영구 소모
-        jokerCount = Mathf.Max(0, jokerCount - 1);
-        globalMaxJokers = jokerCount;  // 다음 스테이지에서도 유지
-
-        // 혹시라도 분자가 분모보다 커지는 상황 방지
+        // 안전하게 정리
         currentJoker = Mathf.Min(currentJoker, jokerCount);
 
         UpdateJokerText();
-
-        Debug.Log("🟧 덱 선택 → 조커 1개 영구 소모 (전역 최대 조커 수 감소)");
+        Debug.Log($"🟧 [JokerStack3D] 덱 사용 → 조커 1개 영구 소모 → {currentJoker}/{jokerCount}");
     }
 
     // ================================================================
-    // 조커 클릭(픽업) → 이번 스테이지에서만 1개 소모 (영구 소모 X)
+    // ② 조커 “던지기” 시 실제 사용
+    //    - 영구 수는 그대로, 현재 스테이지 남은 수만 감소
+    //    - 규칙: currentJoker-- (앞자리만 감소)
     // ================================================================
     public void ReduceCountOnly()
     {
@@ -105,12 +137,15 @@ public class JokerStack3D : MonoBehaviour
             return;
         }
 
-        currentJoker--;
+        currentJoker = Mathf.Max(0, currentJoker - 1);
         UpdateJokerText();
 
-        Debug.Log("🟦 조커 클릭 → 카운트만 감소 (스택 유지, 전역 최대는 그대로)");
+        Debug.Log($"🟦 [JokerStack3D] 조커 투척 → 남은 조커 1 감소 → {currentJoker}/{jokerCount}");
     }
 
+    // ================================================================
+    // 테이블 스택 관리: 조커 하나가 “클릭되어 손으로 이동”할 때 호출
+    // (해당 조커는 이제 스택이 아니라 플레이어 손에 있는 상태)
     // ================================================================
     public void Notify_JokerPicked(Transform tr)
     {
@@ -119,7 +154,9 @@ public class JokerStack3D : MonoBehaviour
     }
 
     // ================================================================
-    IEnumerator SpawnJokerStackAnimated()
+    // 스택 생성
+    // ================================================================
+    private IEnumerator SpawnJokerStackAnimated()
     {
         spawnedJokers.Clear();
 
@@ -143,7 +180,7 @@ public class JokerStack3D : MonoBehaviour
         }
     }
 
-    void ApplySprite(GameObject card)
+    private void ApplySprite(GameObject card)
     {
         MeshRenderer rend = card.GetComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Unlit/Transparent"));
@@ -151,7 +188,7 @@ public class JokerStack3D : MonoBehaviour
         rend.material = mat;
     }
 
-    IEnumerator ScaleUp(Transform target, Vector3 to, float duration)
+    private IEnumerator ScaleUp(Transform target, Vector3 to, float duration)
     {
         float t = 0f;
         Vector3 start = Vector3.zero;
@@ -166,7 +203,7 @@ public class JokerStack3D : MonoBehaviour
         target.localScale = to;
     }
 
-    void EnsureCollider(GameObject card)
+    private void EnsureCollider(GameObject card)
     {
         MeshCollider wrongCol = card.GetComponent<MeshCollider>();
         if (wrongCol != null) Destroy(wrongCol);
@@ -178,7 +215,7 @@ public class JokerStack3D : MonoBehaviour
         }
     }
 
-    void EnsureRigidBody(GameObject card)
+    private void EnsureRigidBody(GameObject card)
     {
         Rigidbody rb = card.GetComponent<Rigidbody>();
         if (!rb) rb = card.AddComponent<Rigidbody>();
@@ -187,7 +224,7 @@ public class JokerStack3D : MonoBehaviour
         rb.isKinematic = true;
     }
 
-    void EnsureDraggable(GameObject card)
+    private void EnsureDraggable(GameObject card)
     {
         if (!card.GetComponent<JokerDraggable>())
             card.AddComponent<JokerDraggable>();

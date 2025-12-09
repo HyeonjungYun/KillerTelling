@@ -4,16 +4,19 @@ public class CameraZoomToDart : MonoBehaviour
 {
     public float zoomSpeed = 6f;
 
-    // Z 값 범위 (네가 원하는 값으로 조절 가능)
+    // Z 값 범위
     public float zoomMin = -7.6f;   // 제일 가까운 쪽 (카메라가 앞으로)
-    public float zoomMax = 3.5f;     // 제일 먼 쪽
+    public float zoomMax = 3.5f;    // 제일 먼 쪽
 
-    private float defaultZ;        // 시작 Z 저장
+    private float defaultZ;         // 시작 Z 저장
+    private float defaultY;         // 시작 Y 저장 ⭐
     private bool zoomLocked = false;  // 조커가 조준 중일 때 true
 
     void Start()
     {
-        defaultZ = transform.position.z;
+        Vector3 pos = transform.position;
+        defaultZ = pos.z;
+        defaultY = pos.y;   // ▶ Y는 항상 이 높이를 유지하게 만들 예정
     }
 
     void Update()
@@ -33,9 +36,12 @@ public class CameraZoomToDart : MonoBehaviour
         // 범위 제한
         z = Mathf.Clamp(z, zoomMin, zoomMax);
 
-        transform.position = new Vector3(transform.position.x,
-                                         transform.position.y,
-                                         z);
+        // ⭐ Y는 항상 defaultY 고정 → 위로 떠버리는 현상 방지
+        transform.position = new Vector3(
+            transform.position.x,
+            defaultY,
+            z
+        );
     }
 
     // 🔒 조커가 “던지기 모드” 들어갈 때 호출
@@ -48,5 +54,16 @@ public class CameraZoomToDart : MonoBehaviour
     public void UnlockZoom()
     {
         zoomLocked = false;
+    }
+
+    // 🔄 스테이지 전환 시 Z/Y를 초기 상태로 되돌리고 싶을 때
+    public void ResetZoom()
+    {
+        Vector3 pos = transform.position;
+        transform.position = new Vector3(
+            pos.x,
+            defaultY,   // 원래 높이
+            defaultZ    // 원래 거리
+        );
     }
 }

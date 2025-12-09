@@ -12,11 +12,13 @@ public class DeckManager : MonoBehaviour
     private Sprite emptySlotSprite;
 
     private List<GameObject> deckCards = new List<GameObject>();
+
+    // (선택) 필요하면 실제로 사용된 카드 목록을 저장해서 재사용해도 됨
     private List<Sprite> removedCards = new List<Sprite>();
     public List<Sprite> RemovedCards => removedCards;
 
-    private float cardWidth = 38f;
-    private float cardHeight = 83f;
+    private float cardWidth = 50f;
+    private float cardHeight = 100f;
     private float spacingX = 6f;
     private float spacingY = 8f;
 
@@ -60,7 +62,6 @@ public class DeckManager : MonoBehaviour
     {
         cardNameToIndex.Clear();
 
-        // cardSprites가 배열이므로 Length 사용
         for (int i = 0; i < cardManager.cardSprites.Length; i++)
         {
             Sprite spr = cardManager.cardSprites[i];
@@ -101,7 +102,7 @@ public class DeckManager : MonoBehaviour
         deckCards.Clear();
 
         List<Sprite> allCards = new List<Sprite>(cardManager.cardSprites);
-        int total = allCards.Count;
+        int total = allCards.Count - 1;
 
         for (int i = 0; i < total; i++)
         {
@@ -140,7 +141,7 @@ public class DeckManager : MonoBehaviour
 
             imgCard.sprite = s;
             rtCard.anchorMin = new Vector2(0, 1);
-            rtCard.anchorMax = new Vector2(0, 1);   // ❗ 오타 수정
+            rtCard.anchorMax = new Vector2(0, 1);
             rtCard.pivot = new Vector2(0, 1);
             rtCard.sizeDelta = new Vector2(cardWidth, cardHeight);
             rtCard.anchoredPosition = new Vector2(x, y);
@@ -163,11 +164,22 @@ public class DeckManager : MonoBehaviour
             rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(1, 1);
 
-            rt.anchoredPosition = new Vector2(-250f, -5f);
+            rt.anchoredPosition = new Vector2(-310f, -5f);
             rt.sizeDelta = new Vector2(100f, 100f);
             rt.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
 
+        // 첫 스테이지 시작용
         ShowRemainingDeck(cardManager, new List<Sprite>());
+    }
+
+    // ============================================================
+    // 🔥 스테이지 리셋용 : 새 52장 덱으로 초기화
+    // ============================================================
+    public void ResetDeckForNewStage()
+    {
+        removedCards.Clear();
+        ShowRemainingDeck(cardManager, new List<Sprite>());
+        Debug.Log("🆕 [DeckManager] 새 스테이지용 덱 리셋 완료 (52장 기준)");
     }
 }
