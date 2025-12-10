@@ -4,13 +4,13 @@ using UnityEngine;
 public class EnergyDrinkMover : MonoBehaviour
 {
     [Header("Model (캔 Mesh가 붙은 Transform)")]
-    public Transform canModel;          // <- EnergyDrink_High__326_Tris_ 할당
+    public Transform canModel;          // 있으면 할당, 없어도 동작은 transform 기준으로 가능
 
     [Header("World Positions")]
-    // 시작 위치(테이블 위) – 현재 월드 좌표
+    // ✅ “원래 자리” — 무조건 여기로 돌아오게 할 것
     public Vector3 idlePosition = new Vector3(1.6f, 1.05f, -3f);
 
-    // 플레이어 앞 위치 – 현재 월드 좌표
+    // 플레이어 앞 위치 (Z만 조절용, 실제로는 이 값 + lift 로 이동)
     public Vector3 drinkPosition = new Vector3(0.4f, 1.05f, -5f);
 
     [Header("Animation Settings")]
@@ -19,6 +19,9 @@ public class EnergyDrinkMover : MonoBehaviour
     public float tiltDuration = 0.6f;   // 기울이는 시간
     public float holdDuration = 0.4f;   // 기울인 상태 유지 시간
     public float returnSpeed = 2.0f;    // 원위치로 되돌아오는 속도
+
+    [Header("Height Adjustment")]
+    public float drinkLiftOffset = 0.4f;  // 플레이어 앞에서 얼마나 들어 올릴지
 
     private Coroutine routine;
     private bool isPlaying = false;
@@ -32,11 +35,13 @@ public class EnergyDrinkMover : MonoBehaviour
 
     private void Awake()
     {
-        if (canModel == null)
+        if (canModel == null && transform.childCount > 0)
             canModel = transform.GetChild(0);
 
-        // 처음 배치된 월드 위치를 idlePosition으로 쓴다면 아래 두 줄로 덮어도 됨
-        idlePosition = transform.position;
+        // ✅ 시작할 때 항상 idlePosition에 배치
+        transform.position = idlePosition;
+        // 필요하면 기본 회전값도 여기서 정해줄 수 있음
+        // transform.rotation = Quaternion.identity;
     }
 
     /// <summary>
@@ -56,22 +61,35 @@ public class EnergyDrinkMover : MonoBehaviour
     {
         isPlaying = true;
 
-        Transform target = (canModel != null) ? canModel : transform;
+        // 🔥 실제로 움직이고 도는 대상은 오브젝트 자체
+        Transform target = transform;
 
         // -----------------------------
-        // 1) 테이블 → 플레이어 앞 이동
+        // 0) 시작 위치 / 회전 저장
         // -----------------------------
-        Vector3 startPos = target.position;
+        Vector3 startPos = target.position;       // 보통 idlePosition과 같을 것
         Quaternion startRot = target.rotation;
 
-        while (Vector3.Distance(target.position, drinkPosition) > 0.01f)
+        // -----------------------------
+        // 1) 테이블 → 플레이어 앞 + 조금 위로 이동
+        // -----------------------------
+        Vector3 drinkPeakPosition = new Vector3(
+            drinkPosition.x,
+            drinkPosition.y + drinkLiftOffset,    // 🔥 여기서 Y를 살짝 올림
+            drinkPosition.z
+        );
+
+        while (Vector3.Distance(target.position, drinkPeakPosition) > 0.01f)
         {
-            target.position = Vector3.Lerp(target.position, drinkPosition, Time.deltaTime * moveSpeed);
+            target.position = Vector3.Lerp(target.position, drinkPeakPosition, Time.deltaTime * moveSpeed);
+
+            // 자연스럽게 세워지게 하고 싶으면 identity 혹은 원하는 회전값으로 보간
             target.rotation = Quaternion.Slerp(target.rotation, Quaternion.identity, Time.deltaTime * moveSpeed * 0.5f);
+
             yield return null;
         }
 
-        target.position = drinkPosition;
+        target.position = drinkPeakPosition;
 
         // -----------------------------
         // 2) 기울여서 마시는 연출
@@ -91,11 +109,11 @@ public class EnergyDrinkMover : MonoBehaviour
         yield return new WaitForSeconds(holdDuration);
 
         // -----------------------------
-        // 3) 다시 세우고 테이블 위치로 복귀
+        // 3) 다시 세우고, “꼭” idlePosition으로 복귀
         // -----------------------------
         t = 0f;
         Quaternion backStartRot = target.rotation;
-        Quaternion backEndRot = startRot;
+        Quaternion backEndRot = startRot;   // 시작 회전으로 복귀
 
         while (Vector3.Distance(target.position, idlePosition) > 0.01f ||
                Quaternion.Angle(target.rotation, backEndRot) > 0.5f)
@@ -105,6 +123,7 @@ public class EnergyDrinkMover : MonoBehaviour
             yield return null;
         }
 
+        // 최종 보정
         target.position = idlePosition;
         target.rotation = backEndRot;
 

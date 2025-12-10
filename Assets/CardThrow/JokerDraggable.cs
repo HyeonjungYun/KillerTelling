@@ -135,27 +135,25 @@ public class JokerDraggable : MonoBehaviour
 
     private void OnCardClicked()
     {
+        // 이미 다른 조커가 선택되어 있다면 새로운 조커 선택 금지
+        if (ActiveJoker != null && ActiveJoker != this)
+        {
+            Debug.Log("⚠ 이미 들고 있는 조커가 있어서 다른 조커를 선택할 수 없습니다.");
+            return;
+        }
+
         if (camRotator)
             camRotator.LookFront();
 
-        // 🔥 Idle 상태에서 처음 클릭 → 손에 들기 시작
+        // 처음 클릭 → 손에 들기 시작
         if (currentState == State.Idle)
         {
-            // 현재 들고 있는 조커로 등록
-            ActiveJoker = this;
-
-            // 👉 테이블 스택 리스트에서 이 조커 제거
-            if (JokerStack3D.Instance != null)
-                JokerStack3D.Instance.Notify_JokerPicked(transform);
-
-            // ❌ 예전에는 여기서 ReduceJokerOnce() 를 호출했음
-            //    이제는 "실제 던질 때"만 카운트 감소하므로 제거
-
+            ActiveJoker = this;     // 현재 조커 등록
             currentState = State.MovingToHand;
             return;
         }
 
-        // 손으로 가져온 뒤 다시 클릭 → 조준 시작
+        // 손에 든 상태에서 다시 클릭 → 조준 모드 진입
         if (currentState == State.Selected)
         {
             currentState = State.Aiming;
@@ -164,13 +162,13 @@ public class JokerDraggable : MonoBehaviour
             startMouseY = Input.mousePosition.y;
 
             lineRen.enabled = true;
-
             transform.rotation = Quaternion.Euler(90, 0, 0);
 
             if (camZoom != null)
                 camZoom.LockZoom();
         }
     }
+
 
     // ============================================================
     private void HandleRightClick()
@@ -212,10 +210,15 @@ public class JokerDraggable : MonoBehaviour
         {
             currentState = State.Selected;
 
+            // 🔥 손에 들고 있는 상태 → 덱과 교환 가능
+            if (HandManager.Instance != null)
+                HandManager.Instance.SetExchangeMode(true);
+
             if (camZoom != null)
                 camZoom.UnlockZoom();
         }
     }
+
 
     // ============================================================
     private void Aiming()

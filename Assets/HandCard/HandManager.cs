@@ -11,51 +11,70 @@ public class HandManager : MonoBehaviour
     [Header("Camera")]
     public CameraRotator camRot;   // 카메라 회전 스크립트 참조
 
+    // "조커를 손에 들고 있어서 덱과 교환 가능한 상태인지" 표시
     private bool isExchangeMode = false;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
 
         if (camRot == null)
             camRot = FindFirstObjectByType<CameraRotator>();
     }
 
-    void Update()
+    // -----------------------------------------------------
+    // 조커 쪽에서 상태를 알려줄 때 사용
+    // -----------------------------------------------------
+    public void SetExchangeMode(bool enable)
     {
-        // B 키로 교환 모드 토글
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            isExchangeMode = !isExchangeMode;
-            Debug.Log("교환 모드: " + isExchangeMode);
-        }
+        isExchangeMode = enable;
+        Debug.Log("교환 모드: " + isExchangeMode);
     }
 
     public bool IsExchangeMode() => isExchangeMode;
 
     // -----------------------------------------------------
-    // 덱 클릭 → 조커 1개 영구 소모 + 패에 카드 추가
+    // 🔥 우측 덱 클릭
+    //  - 반드시 "조커를 손에 들고 있는 상태(던지기 모드)"에서만 동작
+    //  - 그렇지 않으면 그냥 무시
     // -----------------------------------------------------
     public void OnCardSelectedFromDeck(Sprite sprite)
     {
         if (sprite == null) return;
 
-        JokerStack3D.Instance.UseOneJoker();
+        // 1) 던지기 모드가 아니면 교환 불가
+        if (!isExchangeMode || JokerDraggable.ActiveJoker == null)
+        {
+            Debug.Log("⚠ 조커를 손에 들고 있을 때만 덱에서 카드를 가져올 수 있습니다.");
+            return;
+        }
+
+        // 2) 조커 1개 영구 소모
+        //    UseOneJoker 안에서 ActiveJoker가 있으면 그 조커를 테이블/씬에서 제거해줌
+        if (JokerStack3D.Instance != null)
+            JokerStack3D.Instance.UseOneJoker();
+        else
+            Debug.LogWarning("HandManager: JokerStack3D.Instance 가 없음");
+
+        // 3) 플레이어 패에 카드 추가
         SpawnSelectedCard3D(sprite);
 
+        // 4) 카메라 원위치 복귀
         if (camRot != null)
             camRot.LookDefault();
 
-        // 던지기 모드에서 손에 들고 있던 조커가 있으면 제거
-        JokerDraggable.DestroyActiveJokerImmediately();
-
+        // 5) 교환 모드 종료
         isExchangeMode = false;
-        Debug.Log("🔒 교환모드 자동 종료됨 (덱 선택 + 카메라 원위치)");
+        Debug.Log("🔒 교환모드 종료 (덱 교환 완료)");
     }
 
     // -----------------------------------------------------
-    // 조커로 과녁 카드를 맞췄을 때
+    // 조커로 과녁 카드를 맞췄을 때 (조커 소모 X)
     // -----------------------------------------------------
     public void OnCardHitByThrow(Sprite sprite)
     {
@@ -81,7 +100,7 @@ public class HandManager : MonoBehaviour
             card3D.SetSprite(spr);
 
         obj.transform.localPosition = new Vector3(
-            0.5f + count * 0.15f,
+            0.2f + count * 0.15f,
             -6f,
             0.1f
         );
