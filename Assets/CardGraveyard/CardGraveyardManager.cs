@@ -6,6 +6,13 @@ public class CardGraveyardManager : MonoBehaviour
 {
     public static CardGraveyardManager Instance;
 
+    // 🔥 코드상 입력 차단 (키보드, 마우스 이동 등)
+    public static bool IsInputBlocked = false;
+
+    // 🔥 [중요] 유니티 에디터에서 만든 '투명 패널'을 여기에 연결하세요!
+    [Header("Input Blocker")]
+    public GameObject inputBlockerPanel;
+
     [Header("Graveyard")]
     public Transform graveyardArea;
     public GameObject cardPrefab;
@@ -14,12 +21,12 @@ public class CardGraveyardManager : MonoBehaviour
     public TextMeshPro graveyardCounterText;
 
     [Header("Obstacles")]
-    public ShotgunObstacle shotgunObstacle;        // 스페이드 3장 이상
-    public MovingTargetObstacle movingTarget;      // 보스 과녁판
-    public ChainPendulum chainPendulum;            // ♥ 3장 이상 → 체인 진자 장애물
+    public ShotgunObstacle shotgunObstacle;
+    public MovingTargetObstacle movingTarget;
+    public ChainPendulum chainPendulum;
 
     [Header("Drink")]
-    public EnergyDrinkMover energyDrinkMover;      // ♦ 4장 이상 → 음료캔 연출
+    public EnergyDrinkMover energyDrinkMover;
 
     private bool drinkPlayed = false;
 
@@ -30,16 +37,19 @@ public class CardGraveyardManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        // 게임 시작 시 입력 차단 해제 및 패널 끄기
+        IsInputBlocked = false;
+        if (inputBlockerPanel != null)
+            inputBlockerPanel.SetActive(false);
     }
 
-    // ===========================================================
     public void AddCards(List<Sprite> cards)
     {
         storedCards.AddRange(cards);
         UpdateGraveyardUI();
     }
 
-    // ===========================================================
     private void UpdateGraveyardUI()
     {
         foreach (Transform child in graveyardArea)
@@ -59,33 +69,27 @@ public class CardGraveyardManager : MonoBehaviour
             suitGroups[suit].Add(spr);
         }
 
+        // 카드 배치 (기존 로직)
         float stackStartX = -1.5f;
         float stackSpacingX = 1.3f;
         float cardOffsetY = 0.04f;
         float cardScale = 1.1f;
-
         char[] suitOrder = { 'S', 'H', 'D', 'C' };
 
         for (int s = 0; s < suitOrder.Length; s++)
         {
             char suit = suitOrder[s];
             List<Sprite> list = suitGroups[suit];
-
             float stackX = stackStartX + s * stackSpacingX;
 
             for (int i = 0; i < list.Count; i++)
             {
                 Sprite spr = list[i];
                 GameObject obj = Instantiate(cardPrefab, graveyardArea);
-
                 Card3D card3D = obj.GetComponent<Card3D>();
                 card3D.SetSprite(spr);
 
-                obj.transform.localPosition = new Vector3(
-                    stackX,
-                    i * cardOffsetY,
-                    0);
-
+                obj.transform.localPosition = new Vector3(stackX, i * cardOffsetY, 0);
                 obj.transform.localRotation = Quaternion.Euler(90, 0, 0);
                 obj.transform.localScale = Vector3.one * cardScale;
             }
@@ -95,21 +99,17 @@ public class CardGraveyardManager : MonoBehaviour
         UpdateGraveyardCounterText(suitGroups);
     }
 
-    // ===========================================================
     private void UpdateGraveyardCounterText(Dictionary<char, List<Sprite>> suits)
     {
         if (graveyardCounterText == null) return;
-
         int spade = suits['S'].Count;
         int heart = suits['H'].Count;
         int diamond = suits['D'].Count;
         int club = suits['C'].Count;
 
-        graveyardCounterText.text =
-            $"♠ {spade}   ♦ {diamond}   ♥ {heart}   ♣ {club}";
+        graveyardCounterText.text = $"♠ {spade}   ♦ {diamond}   ♥ {heart}   ♣ {club}";
     }
 
-    // ===========================================================
     private void CheckObstacleActivation(Dictionary<char, List<Sprite>> suitGroups)
     {
         int spade = suitGroups['S'].Count;
@@ -117,14 +117,7 @@ public class CardGraveyardManager : MonoBehaviour
         int diamond = suitGroups['D'].Count;
         int club = suitGroups['C'].Count;
 
-        GameObject obstacleRoot = GameObject.Find("ObstacleMover");
-        if (obstacleRoot != null)
-        {
-            Transform mesh = obstacleRoot.transform.Find("ObstacleMesh");
-            if (mesh != null)
-                mesh.gameObject.SetActive(heart >= 3);
-        }
-
+        // 1. 하트: 체인
         if (chainPendulum != null)
         {
             if (heart >= 3)
@@ -143,46 +136,68 @@ public class CardGraveyardManager : MonoBehaviour
             }
         }
 
+        // 1-1. 장애물 메쉬 활성화 여부
+        GameObject obstacleRoot = GameObject.Find("ObstacleMover");
+        if (obstacleRoot != null)
+        {
+            Transform mesh = obstacleRoot.transform.Find("ObstacleMesh");
+            if (mesh != null) mesh.gameObject.SetActive(heart >= 3);
+        }
+
+        // 2. 스페이드: 샷건
         if (shotgunObstacle != null)
             shotgunObstacle.SetActiveState(spade >= 3);
 
-        bool bossCondition =
-            spade >= 4 &&
-            diamond >= 3 &&
-            heart >= 2 &&
-            club >= 2;
+        // 3. 복합: 보스 과녁
+        bool bossCondition = spade >= 4 && diamond >= 3 && heart >= 2 && club >= 2;
+        if (movingTarget != null) movingTarget.active = bossCondition;
 
-        if (movingTarget != null)
-            movingTarget.active = bossCondition;
-
-        // 음료캔 연출 : 다이아몬드 4장 이상
+        // 4. 🔥 다이아: 에너지 드링크 (입력 차단 + 연출)
         if (!drinkPlayed && diamond >= 4 && energyDrinkMover != null)
         {
-            drinkPlayed = true;
-            energyDrinkMover.PlayDrinkOnce();
+            PlayDrinkSequence();
         }
     }
 
     // ===========================================================
+    // 🔥 연출 및 입력 차단 핵심 로직
+    // ===========================================================
+    private void PlayDrinkSequence()
+    {
+        drinkPlayed = true;
+
+        // 1. 코드상 차단
+        IsInputBlocked = true;
+
+        // 2. 물리적 차단 (투명 패널 켜기) -> UI 클릭 방지
+        if (inputBlockerPanel != null)
+            inputBlockerPanel.SetActive(true);
+
+        Debug.Log("🚫 [System] 다이아 4장 달성! 연출 시작 (전체 입력 차단)");
+
+        // 3. 연출 실행 (끝나면 실행할 행동 전달)
+        energyDrinkMover.PlayDrinkOnce(() =>
+        {
+            // ✅ 연출 종료 시 실행되는 부분
+            IsInputBlocked = false;
+
+            if (inputBlockerPanel != null)
+                inputBlockerPanel.SetActive(false);
+
+            Debug.Log("✅ [System] 연출 종료 (입력 차단 해제)");
+        });
+    }
+
     private char ExtractSuit(string spriteName)
     {
         if (string.IsNullOrEmpty(spriteName)) return 'S';
-
         char c = char.ToUpper(spriteName[spriteName.Length - 1]);
-
-        if (c == 'S' || c == 'H' || c == 'D' || c == 'C')
-            return c;
-
-        Debug.LogWarning("Unknown suit in sprite: " + spriteName);
+        if (c == 'S' || c == 'H' || c == 'D' || c == 'C') return c;
         return 'S';
     }
 
-    // ============================================================
-    // 🔥 스테이지 전환 시 → 무덤은 그대로, UI/장애물 상태만 다시 계산하고 싶을 때
-    // ============================================================
     public void OnStageChanged_KeepState()
     {
         UpdateGraveyardUI();
-        Debug.Log("♻ [CardGraveyardManager] 스테이지 변경 → 무덤 상태 유지 + UI/장애물 재적용");
     }
 }
