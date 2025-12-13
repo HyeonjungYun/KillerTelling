@@ -53,8 +53,26 @@ public class JokerDraggable : MonoBehaviour
     private CameraZoomToDart camZoom;
     private bool jokerCountReduced = false;
 
+    [Header("Sound")]
+    public AudioClip pickSound;       // Idle → MovingToHand
+    public AudioClip readySound;      // 손 도착
+    public AudioClip aimSound;        // Selected → Aiming
+    public AudioClip throwSound;      // 던질 때
+    public AudioClip hitWallSound;    // 벽 충돌
+    public AudioClip hitObstacleSound;// 장애물 충돌
+    public AudioClip fallSound;       // 낙하 시작
+    public AudioClip hitTargetSound;  // UI 카드 맞추기
+
+    private AudioSource audioSource;
+
+
     private void Awake()
     {
+
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+
+
         cam = Camera.main;
         rb = GetComponent<Rigidbody>();
         rb.useGravity = false;
@@ -135,12 +153,14 @@ public class JokerDraggable : MonoBehaviour
         {
             ActiveJoker = this;
             currentState = State.MovingToHand;
+            if (pickSound) audioSource.PlayOneShot(pickSound);
             return;
         }
 
         if (currentState == State.Selected)
         {
             currentState = State.Aiming;
+            if (aimSound) audioSource.PlayOneShot(aimSound);
             startMouseX = Input.mousePosition.x;
             startMouseY = Input.mousePosition.y;
             lineRen.enabled = true;
@@ -182,6 +202,7 @@ public class JokerDraggable : MonoBehaviour
         if (Vector3.Distance(transform.position, target) < 0.05f)
         {
             currentState = State.Selected;
+            if (readySound) audioSource.PlayOneShot(readySound);
             if (HandManager.Instance != null) HandManager.Instance.SetExchangeMode(true);
             if (camZoom != null) camZoom.UnlockZoom();
         }
@@ -193,6 +214,7 @@ public class JokerDraggable : MonoBehaviour
         {
             ReduceJokerOnce();
             currentState = State.Flying;
+            if (throwSound) audioSource.PlayOneShot(throwSound);
             lineRen.enabled = false;
             Quaternion lookRot = Quaternion.LookRotation(currentVelocity);
             transform.rotation = Quaternion.Euler(90, lookRot.eulerAngles.y, 0);
@@ -277,6 +299,7 @@ public class JokerDraggable : MonoBehaviour
             if (Vector3.Dot(dir, obstHit.point - castStart) > 0f)
             {
                 transform.position = obstHit.point - dir * 0.02f;
+                if (hitObstacleSound) audioSource.PlayOneShot(hitObstacleSound);
                 StartFalling(nextVel);
                 return;
             }
@@ -290,6 +313,7 @@ public class JokerDraggable : MonoBehaviour
                 transform.position = wallHit.point - dir * wallStopOffset;
                 currentState = State.Stuck;
                 ClearActiveIfSelf();
+                if (hitWallSound) audioSource.PlayOneShot(hitWallSound);
                 if (camZoom != null) camZoom.UnlockZoom();
                 TryHitUICard(wallHit.point);
                 return;
@@ -303,6 +327,7 @@ public class JokerDraggable : MonoBehaviour
 
     private void StartFalling(Vector3 vel)
     {
+        if (fallSound) audioSource.PlayOneShot(fallSound);
         currentState = State.Stuck;
         spinSpeed = 0f;
         ClearActiveIfSelf();
@@ -316,6 +341,7 @@ public class JokerDraggable : MonoBehaviour
 
     private void TryHitUICard(Vector3 hitPos)
     {
+
         if (!wallPlacer || !wallPlacer.targetArea) return;
         Camera uiCam = Camera.main;
         Vector2 screenPoint = uiCam.WorldToScreenPoint(hitPos);
@@ -334,6 +360,7 @@ public class JokerDraggable : MonoBehaviour
 
         if (best != null)
         {
+            if (hitTargetSound) audioSource.PlayOneShot(hitTargetSound);
             HandManager.Instance.OnCardHitByThrow(best.sprite);
             Destroy(best.gameObject);
         }
@@ -354,4 +381,6 @@ public class JokerDraggable : MonoBehaviour
 
     private void ClearActiveIfSelf() { if (ActiveJoker == this) ActiveJoker = null; }
     public static void DestroyActiveJokerImmediately() { if (ActiveJoker != null) { Destroy(ActiveJoker.gameObject); ActiveJoker = null; } }
+
+
 }

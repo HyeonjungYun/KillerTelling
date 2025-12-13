@@ -1,29 +1,42 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class HelpPopupController : MonoBehaviour
 {
-    public GameObject helpPopup;     // HelpPopup Panel
-    public Button helpButton;        // ¿À¸¥ÂÊ ¾Æ·¡ ? ¹öÆ°
-    public Button closeButton;       // ÆË¾÷ ¾ÈÀÇ X ¹öÆ°
+    public GameObject helpPopup;
+    public Button helpButton;
+    public Button closeButton;
+
+    // ğŸ”Š íš¨ê³¼ìŒ
+    public AudioClip openSound;
+    public AudioClip closeSound;
+
+    private AudioSource audioSource;
 
     private void Start()
     {
-        // ½ÃÀÛ ½Ã ÆË¾÷ ºñÈ°¼ºÈ­
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+
         helpPopup.SetActive(false);
 
-        // ¹öÆ° ÀÌº¥Æ® ¿¬°á
         helpButton.onClick.AddListener(OpenPopup);
         closeButton.onClick.AddListener(ClosePopup);
     }
 
     void OpenPopup()
     {
+        if (openSound != null)
+            audioSource.PlayOneShot(openSound);
+
         helpPopup.SetActive(true);
     }
 
     void ClosePopup()
     {
+        if (closeSound != null)
+            audioSource.PlayOneShot(closeSound);
+
         helpPopup.SetActive(false);
     }
 }

@@ -21,6 +21,18 @@ public class SubmitButton : MonoBehaviour
     public Transform goalCardArea;
     public GameObject resultCardPrefab;
 
+    [Header("SFX")]
+    public AudioClip submitClickSFX;
+    public AudioClip resultClearSFX;
+    public AudioClip resultFailSFX;
+    public AudioClip cardAppearSFX;
+    public AudioClip checkButtonClickSFX;
+
+    private AudioSource audioSource;
+
+   
+
+
     // 상태 플래그
     private bool hasSubmittedThisStage = false;
     private bool lastIsClear = false;
@@ -28,6 +40,9 @@ public class SubmitButton : MonoBehaviour
 
     private void Start()
     {
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+
         UpdateButtonState();
 
         if (submitButton != null)
@@ -42,6 +57,9 @@ public class SubmitButton : MonoBehaviour
         if (checkButton != null)
             checkButton.onClick.AddListener(OnResultCheckButtonPressed);
     }
+
+
+
 
     private void Update()
     {
@@ -77,6 +95,13 @@ public class SubmitButton : MonoBehaviour
     // -----------------------------------------------------
     private void OnSubmit()
     {
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.Pause();
+
+        // 🔊 제출 버튼 클릭음
+        if (submitClickSFX != null)
+            audioSource.PlayOneShot(submitClickSFX);
+
         if (hasSubmittedThisStage) return;     // 두 번 제출 방지
         hasSubmittedThisStage = true;
 
@@ -114,33 +139,66 @@ public class SubmitButton : MonoBehaviour
         bool isClear = playerValue >= goalValue;
         lastIsClear = isClear;
 
-        // StageManager에 결과 통보 (로그용)
+        // 🔥🔥🔥 여기 추가
         if (StageManager.Instance != null)
-            StageManager.Instance.OnSubmitResult(isClear);
-
-        // 결과 UI
-        if (resultCanvas != null)
         {
-            resultCanvas.SetActive(true);
-            resultCanvasText.text =
-                $"<size=50><b>RESULT</b></size>\n" +
-                $"Player : {playerRank}                   Goal : {goalRank}\n\n\n\n\n\n" +
-                (isClear ? "<color=#FFD700><size=55><b>CLEAR!</b></size></color>"
-                         : "<color=red><size=55><b>FAIL</b></size></color>");
+            if (StageManager.Instance.movingTarget != null)
+                StageManager.Instance.movingTarget.StopLoopSFX();
+
+            if (StageManager.Instance.chainPendulum != null)
+                StageManager.Instance.chainPendulum.StopLoopSFX();
         }
 
+        // 🔊 결과 사운드
+        if (isClear)
+        {
+            if (resultClearSFX != null)
+                audioSource.PlayOneShot(resultClearSFX);
+        }
+        else
+        {
+            if (resultFailSFX != null)
+                audioSource.PlayOneShot(resultFailSFX);
+        }
+
+        resultCanvas.SetActive(true);
+       
+        checkButton.gameObject.SetActive(true);
+
+        // 텍스트 먼저 넣고
+        resultCanvasText.text =
+            $"<size=50><b>RESULT</b></size>\n" +
+            $"Player : {playerRank}                   Goal : {goalRank}\n\n\n\n\n\n" +
+            (isClear ? "<color=#FFD700><size=55><b>CLEAR!</b></size></color>"
+                     : "<color=red><size=55><b>FAIL</b></size></color>");
+
+
+        // 🔥 UI 강제 안정화
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(
+            resultCanvas.GetComponent<RectTransform>()
+        );
+
+
+        // 카드 코루틴 시작
         StartCoroutine(ShowPlayerCards(playerDeck));
         StartCoroutine(ShowGoalCards(goalDeck));
 
-        // ⚠ 핵심: 실제 3D 패는 여기서 바로 비워 둔다
-        if (HandManager.Instance != null)
-            HandManager.Instance.ClearSelectedCards3D();
+        // 🔥 여기서 바로 호출 ❌
+        // StageManager.Instance.OnSubmitResult(isClear);
+
+       
+
+        // 3D 패 정리
+        HandManager.Instance.ClearSelectedCards3D();
+
     }
+
 
     // -----------------------------------------------------
     // 결과창 Check 버튼
     // -----------------------------------------------------
-    private void OnResultCheckButtonPressed()
+    /*private void OnResultCheckButtonPressed()
     {
         if (StageManager.Instance == null)
         {
@@ -165,7 +223,64 @@ public class SubmitButton : MonoBehaviour
 
         if (resultCanvas != null)
             resultCanvas.SetActive(false);
+    }*/
+
+    private void OnResultCheckButtonPressed()
+    {
+
+        // 🔊 체크 버튼 클릭음
+        if (checkButtonClickSFX != null)
+            audioSource.PlayOneShot(checkButtonClickSFX);
+
+        if (StageManager.Instance == null)
+            return;
+
+        // 🔥 1. 결과창부터 먼저 끈다
+        if (resultCanvas != null)
+        {
+          
+            resultCanvas.SetActive(false);
+        }
+
+        // 🔥 2. 그 다음에 스테이지 처리
+        if (lastIsClear)
+        {
+            StageManager.Instance.OnSubmitResult(true);
+            StageManager.Instance.GoToNextStage();
+        }
+        else
+        {
+            if (BGMManager.Instance != null)
+                BGMManager.Instance.Stop(); // 실패 엔딩 처리
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
     }
+
+
+
+    private int cardAnimFinishedCount = 0;
+
+    private void OnCardAnimFinished()
+    {
+        cardAnimFinishedCount++;
+
+        if (cardAnimFinishedCount == 2)
+        {
+            cardAnimFinishedCount = 0;
+
+            // 🔥 여기서 단 한 번만
+            if (StageManager.Instance != null)
+            {
+               
+            }
+        }
+    }
+
+
 
     // -----------------------------------------------------
     // 결과창: 플레이어 패 연출
@@ -179,6 +294,7 @@ public class SubmitButton : MonoBehaviour
         float y = 0f;
 
         List<RectTransform> slotPositions = new List<RectTransform>();
+
 
         for (int i = 0; i < 5; i++)
         {
@@ -194,12 +310,15 @@ public class SubmitButton : MonoBehaviour
         {
             GameObject card = Instantiate(resultCardPrefab, playerCardArea);
             RectTransform rt = card.GetComponent<RectTransform>();
+            // 🔊 카드 등장음
+            if (cardAppearSFX != null)
+                audioSource.PlayOneShot(cardAppearSFX);
 
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = slotPositions[i].anchoredPosition;
 
             card.GetComponent<Image>().sprite = deck[i].sprite;
-
+            card.GetComponent<Image>().raycastTarget = false;
             card.transform.localScale = Vector3.zero;
 
             float t = 0f;
@@ -212,6 +331,9 @@ public class SubmitButton : MonoBehaviour
 
             yield return new WaitForSeconds(0.1f);
         }
+
+        OnCardAnimFinished();
+
     }
 
     // -----------------------------------------------------
@@ -241,12 +363,15 @@ public class SubmitButton : MonoBehaviour
         {
             GameObject card = Instantiate(resultCardPrefab, goalCardArea);
             RectTransform rt = card.GetComponent<RectTransform>();
+            // 🔊 카드 등장음
+            if (cardAppearSFX != null)
+                audioSource.PlayOneShot(cardAppearSFX);
 
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = slotPositions[i].anchoredPosition;
 
             card.GetComponent<Image>().sprite = deck[i].sprite;
-
+            card.GetComponent<Image>().raycastTarget = false;
             card.transform.localScale = Vector3.zero;
 
             float t = 0f;
@@ -259,5 +384,7 @@ public class SubmitButton : MonoBehaviour
 
             yield return new WaitForSeconds(0.1f);
         }
+        OnCardAnimFinished();
+
     }
 }

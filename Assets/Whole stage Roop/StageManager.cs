@@ -32,24 +32,41 @@ public class StageManager : MonoBehaviour
     public GameObject mainMenuCanvas;
     public GameObject continueButton;
 
+    [Header("SFX")]
+    public AudioClip gameStartSFX;
+    public AudioClip stageStartSFX;
+    public AudioClip stageClearSFX;
+    public AudioClip postDialogueStartSFX;
+    public AudioClip nextStageSFX;
+    public AudioClip continueButtonClickSFX;
+
+    [Header("Obstacle Audio Control")]
+    public MovingTargetObstacle movingTarget;
+    public ChainPendulum chainPendulum;
+
+    private AudioSource audioSource;
+
+
     // 게임 상태 변수 (예시)
     private bool isStageEnded = false;
 
     private void Awake()
     {
-        // 싱글톤 초기화
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
-        // 게임 시작 시 버튼 숨기기
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+
         if (continueButton != null)
-        {
             continueButton.SetActive(false);
-        }
     }
 
     private void Start()
     {
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.PlayMainMenu();
+
         if (jokerStack == null) jokerStack = FindFirstObjectByType<JokerStack3D>();
         if (goalDeckManager == null) goalDeckManager = FindFirstObjectByType<GoalDeckManager>();
         if (startCardPicker == null) startCardPicker = FindFirstObjectByType<GameStartCardPicker>();
@@ -79,32 +96,39 @@ public class StageManager : MonoBehaviour
         }
     }
 
+
     public void OnClickGameStart()
     {
         Debug.Log("Game Start 버튼 눌림 -> 게임 시작!");
 
-        // 1. 메인 화면 캔버스 숨기기
-        if (mainMenuCanvas != null)
-        {
-            mainMenuCanvas.SetActive(false);
-        }
+        // 🔊 게임 시작 버튼 효과음 (가장 먼저!)
+        if (gameStartSFX != null)
+            audioSource.PlayOneShot(gameStartSFX);
 
-        // 2. 실제 스테이지 로직 시작 (원래 Start에 있던 거)
-        // 시작 시 카메라를 라디오 위치로 이동
+        if (mainMenuCanvas != null)
+            mainMenuCanvas.SetActive(false);
+
+        // 🔊 메인 → 1스테이지 브금 전환 (여기가 핵심)
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.PlayStage(1);
+
         if (CameraDirector.Instance != null && camPosRadio != null)
-        {
             CameraDirector.Instance.MoveToTarget(camPosRadio);
-        }
 
         EnterStageSequence(currentStage);
     }
+
 
     // -----------------------------------------------------
     // 스테이지 진입 (대화 시작)
     // -----------------------------------------------------
     public void EnterStageSequence(int stageIndex)
     {
+        
         currentStage = Mathf.Clamp(stageIndex, 1, maxStage);
+
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.PlayStage(currentStage);
 
         // 1. 카메라 이동 (Radio)
         if (CameraDirector.Instance != null && camPosRadio != null)
@@ -139,11 +163,20 @@ public class StageManager : MonoBehaviour
     // -----------------------------------------------------
     private void SetupStageGameplay()
     {
+ 
+
+
+        // 🔊 스테이지 시작 사운드
+        if (stageStartSFX != null)
+            audioSource.PlayOneShot(stageStartSFX);
+
         // 1. 카메라 이동 (Game)
         if (CameraDirector.Instance != null && camPosGame != null)
         {
             CameraDirector.Instance.MoveToTarget(camPosGame);
         }
+    
+
 
         // 🔥 2. 게임 시작! 게임 UI 표시
         SetGameUIActive(true);
@@ -155,6 +188,12 @@ public class StageManager : MonoBehaviour
         if (goalDeckManager != null) goalDeckManager.SetupGoalForStage(currentStage);
         if (startCardPicker != null) startCardPicker.SetupForStage(currentStage);
         if (DeckManager.Instance != null) DeckManager.Instance.ResetDeckForNewStage();
+
+        if (movingTarget != null)
+            movingTarget.ResumeLoopSFX();
+
+        if (chainPendulum != null)
+            chainPendulum.ResumeLoopSFX();
     }
 
     // -----------------------------------------------------
@@ -164,6 +203,17 @@ public class StageManager : MonoBehaviour
     {
         if (isClear)
         {
+            if (movingTarget != null)
+                movingTarget.StopLoopSFX();
+
+            if (chainPendulum != null)
+                chainPendulum.StopLoopSFX();
+
+            // 🔊 스테이지 클리어 확정음
+            if (stageClearSFX != null)
+                audioSource.PlayOneShot(stageClearSFX);
+
+
             // 1. 카메라 이동 (Radio)
             if (CameraDirector.Instance != null && camPosRadio != null)
             {
@@ -192,8 +242,17 @@ public class StageManager : MonoBehaviour
 
     public void GoToNextStage()
     {
+
+        // 🔊 다음 스테이지 이동음
+        if (nextStageSFX != null)
+            audioSource.PlayOneShot(nextStageSFX);
+
+
         if (currentStage >= maxStage)
         {
+            if (BGMManager.Instance != null)
+                BGMManager.Instance.PlayEnding();
+
             Debug.Log($"🏆 모든 스테이지 클리어!");
             return;
         }
@@ -244,6 +303,12 @@ public class StageManager : MonoBehaviour
     // ================================================================
     public void OnClickContinue()
     {
+
+        // 🔊 Continue 버튼 클릭음
+        if (continueButtonClickSFX != null)
+            audioSource.PlayOneShot(continueButtonClickSFX);
+
+
         Debug.Log("Continue 버튼 눌림 -> 스테이지 재시작");
 
         GoToNextStage();

@@ -97,7 +97,15 @@ public class HandManager : MonoBehaviour
         GameObject obj = Instantiate(card3DPrefab, selectedCard3DSpawnPoint);
 
         if (obj.TryGetComponent(out Card3D card3D))
+        {
             card3D.SetSprite(spr);
+            card3D.isInteractable = false;
+        }
+
+        // 🔥🔥🔥 핵심: Collider 제거 or 비활성화
+        Collider col = obj.GetComponent<Collider>();
+        if (col != null)
+            col.enabled = false;
 
         obj.transform.localPosition = new Vector3(
             0.2f + count * 0.15f,
@@ -108,6 +116,7 @@ public class HandManager : MonoBehaviour
         obj.transform.localScale = new Vector3(0.25f, 0.35f, 0.25f);
         obj.transform.localRotation = Quaternion.Euler(0, 0, 0);
     }
+
 
     // -----------------------------------------------------
     // 🔥 새 스테이지 시작 / 결과 확인 뒤 등에 패를 싹 비움

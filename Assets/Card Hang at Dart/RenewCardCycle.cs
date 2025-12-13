@@ -9,30 +9,42 @@ public class RenewCardCycle : MonoBehaviour
     public RectTransform targetArea;
     public Button renewButton;
 
+    [Header("SFX")]
+    public AudioClip renewClickSound;
+    public AudioClip graveyardSound;
+
+    private AudioSource audioSource;
+
     private void Start()
     {
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+
         if (renewButton != null)
             renewButton.onClick.AddListener(OnRenewClicked);
     }
 
     private void OnRenewClicked()
     {
+        // 🔊 클릭 사운드
+        if (renewClickSound != null)
+            audioSource.PlayOneShot(renewClickSound);
+
         Debug.Log("🔄 [Renew] 새 카드 뽑기 (최대 5장)");
 
-        // 1) 기존 과녁 카드 무덤으로 이동
+        // 1) 기존 과녁 카드 → 무덤 이동
         MoveOldCardsToGraveyard();
 
         // 2) 덱에서 최대 5장 가져오기
         List<Sprite> newSprites = DrawUpTo5FromDeck();
 
-        // 덱에 남은 카드가 전혀 없다면 (더 이상 Renew 불가)
         if (newSprites == null || newSprites.Count == 0)
         {
             Debug.Log("❌ 덱이 비어서 더 이상 Renew 할 수 없습니다.");
             return;
         }
 
-        // 3) 과녁에 새 카드 배치 (5장 미만이어도 OK)
+        // 3) 새 카드 배치
         wallPlacer.PlaceCards(newSprites);
 
         Debug.Log($"✨ [Renew] 새 카드 {newSprites.Count}장 배치 완료!");
@@ -63,19 +75,24 @@ public class RenewCardCycle : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        if (removeList.Count > 0 && CardGraveyardManager.Instance != null)
-            CardGraveyardManager.Instance.AddCards(removeList);
+        if (removeList.Count > 0)
+        {
+            // 🔊 무덤으로 카드 떨어지는 소리
+            if (graveyardSound != null)
+                audioSource.PlayOneShot(graveyardSound);
+
+            if (CardGraveyardManager.Instance != null)
+                CardGraveyardManager.Instance.AddCards(removeList);
+        }
     }
 
     // ---------------------------
-    // 덱에서 "최대" 5장 랜덤 뽑기
-    // (5장 미만이면 남은 만큼 전부)
+    // 덱에서 최대 5장 뽑기
     // ---------------------------
     private List<Sprite> DrawUpTo5FromDeck()
     {
         DeckCard[] deckCards = FindObjectsOfType<DeckCard>();
 
-        // 아직 사용 가능한 덱 카드만 모으기
         List<DeckCard> selectable = new List<DeckCard>();
         foreach (var dc in deckCards)
         {
@@ -86,14 +103,9 @@ public class RenewCardCycle : MonoBehaviour
 
         int available = selectable.Count;
         if (available == 0)
-        {
-            // 정말 아무 카드도 안 남았으면 빈 리스트 반환
             return new List<Sprite>();
-        }
 
-        // 이번에 뽑을 개수: 최대 5장, 남은 만큼
         int drawCount = Mathf.Min(5, available);
-
         List<Sprite> picked = new List<Sprite>();
 
         for (int i = 0; i < drawCount; i++)
@@ -104,7 +116,6 @@ public class RenewCardCycle : MonoBehaviour
 
             picked.Add(card.CardSprite);
 
-            // 덱에서 사용된 카드 → 회색 + 클릭 불가 처리
             Image img = card.GetComponent<Image>();
             if (img != null)
             {
@@ -113,8 +124,7 @@ public class RenewCardCycle : MonoBehaviour
             }
         }
 
-        // 뽑고 나니 더 이상 선택 가능한 카드가 없다면 Renew 버튼 비활성화
-        if (renewButton != null && (available - drawCount) <= 0)
+        if (renewButton != null && available - drawCount <= 0)
         {
             renewButton.interactable = false;
             Debug.Log("🛑 덱이 모두 소진됨 → Renew 버튼 비활성화");

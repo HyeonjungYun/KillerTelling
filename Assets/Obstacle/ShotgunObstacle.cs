@@ -1,25 +1,32 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
 
 public class ShotgunObstacle : MonoBehaviour
 {
     [Header("Move Settings")]
-    public Transform model;              // ¼¦°Ç ¸ğµ¨(¿òÁ÷ÀÏ ´ë»ó)
-    public Transform idlePosition;       // Å×ÀÌºí À§ ÀÚ¸®
-    public Transform obstaclePosition;   // ¹æÇØ¹° ÀÚ¸®(µé¸° »óÅÂ)
+    public Transform model;              // ìƒ·ê±´ ëª¨ë¸(ì›€ì§ì¼ ëŒ€ìƒ)
+    public Transform idlePosition;       // í…Œì´ë¸” ìœ„ ìë¦¬
+    public Transform obstaclePosition;   // ë°©í•´ë¬¼ ìë¦¬(ë“¤ë¦° ìƒíƒœ)
     public float moveSpeed = 4f;
 
     private bool isActive = false;
 
     [Header("Collision Settings")]
-    public Collider obstacleCollider;    // ½ÇÁ¦ Ä«µå¿Í ºÎµúÈú Äİ¶óÀÌ´õ(¾øÀ¸¸é ÀÚµ¿À¸·Î Ã£À½)
+    public Collider obstacleCollider;    // ì‹¤ì œ ì¹´ë“œì™€ ë¶€ë”ªí ì½œë¼ì´ë”(ì—†ìœ¼ë©´ ìë™ìœ¼ë¡œ ì°¾ìŒ)
 
     private int obstacleLayer;
     private int ignoreCardLayer;
 
+    [Header("SFX")]
+    public AudioClip activateSFX;    // ì˜¬ë¼ì˜¬ ë•Œ
+    public AudioClip deactivateSFX;  // ë‚´ë ¤ê°ˆ ë•Œ
+    public AudioClip moveLoopSFX;    // (ì„ íƒ) ì›€ì§ì´ëŠ” ë™ì•ˆ
+
+    private AudioSource audioSource;
+
+
     private void Awake()
     {
-        // ±âº» ÂüÁ¶ ¼¼ÆÃ
         if (model == null)
             model = transform;
 
@@ -29,23 +36,37 @@ public class ShotgunObstacle : MonoBehaviour
         obstacleLayer = LayerMask.NameToLayer("Obstacle");
         ignoreCardLayer = LayerMask.NameToLayer("IgnoreCard");
 
-        // Ã³À½¿¡´Â Ç×»ó ºñÈ°¼º »óÅÂ·Î ½ÃÀÛ (Ãæµ¹ X)
+        // ğŸ”Š AudioSource ì¤€ë¹„
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
+
         SetActiveState(false);
     }
 
     /// <summary>
-    /// ¹«´ı Á¶°Ç¿¡ µû¶ó CardGraveyardManager ¿¡¼­ È£ÃâµÊ
-    /// spade >= 3 ÀÌ¸é active=true, ¾Æ´Ï¸é false ·Î µé¾î¿È
+    /// ë¬´ë¤ ì¡°ê±´ì— ë”°ë¼ CardGraveyardManager ì—ì„œ í˜¸ì¶œë¨
+    /// spade >= 3 ì´ë©´ active=true, ì•„ë‹ˆë©´ false ë¡œ ë“¤ì–´ì˜´
     /// </summary>
     public void SetActiveState(bool active)
     {
         if (isActive == active) return;
         isActive = active;
 
-        // 1) Ãæµ¹/·¹ÀÌ¾î »óÅÂ ¸ÕÀú Àû¿ë
+
+        // ğŸ”Š ìƒíƒœ ì „í™˜ SFX
+        if (audioSource != null)
+        {
+            if (active && activateSFX != null)
+                audioSource.PlayOneShot(activateSFX);
+            else if (!active && deactivateSFX != null)
+                audioSource.PlayOneShot(deactivateSFX);
+        }
+
+        // 1) ì¶©ëŒ/ë ˆì´ì–´ ìƒíƒœ ë¨¼ì € ì ìš©
         ApplyCollisionState(active);
 
-        // 2) ±× ´ÙÀ½ À§Ä¡ ÀÌµ¿ ÄÚ·çÆ¾ ½ÇÇà
+        // 2) ê·¸ ë‹¤ìŒ ìœ„ì¹˜ ì´ë™ ì½”ë£¨í‹´ ì‹¤í–‰
         StopAllCoroutines();
         StartCoroutine(active ? MoveUp() : MoveDown());
 
@@ -53,11 +74,19 @@ public class ShotgunObstacle : MonoBehaviour
     }
 
     // ------------------------------------------------------------
-    //   ÀÌµ¿ ÄÚ·çÆ¾ (±âÁ¸ ÄÚµå ±×´ë·Î)
+    //   ì´ë™ ì½”ë£¨í‹´ (ê¸°ì¡´ ì½”ë“œ ê·¸ëŒ€ë¡œ)
     // ------------------------------------------------------------
     private IEnumerator MoveUp()
     {
         if (model == null || obstaclePosition == null) yield break;
+
+        // ğŸ”Š ì´ë™ ë£¨í”„ ì‹œì‘
+        if (moveLoopSFX != null)
+        {
+            audioSource.clip = moveLoopSFX;
+            audioSource.loop = true;
+            audioSource.Play();
+        }
 
         while (Vector3.Distance(model.position, obstaclePosition.position) > 0.01f)
         {
@@ -75,6 +104,9 @@ public class ShotgunObstacle : MonoBehaviour
 
             yield return null;
         }
+        // ğŸ”‡ ì´ë™ ë£¨í”„ ì¢…ë£Œ
+        if (audioSource.loop)
+            audioSource.Stop();
     }
 
     private IEnumerator MoveDown()
@@ -100,15 +132,15 @@ public class ShotgunObstacle : MonoBehaviour
     }
 
     // ------------------------------------------------------------
-    //   ·¹ÀÌ¾î/Äİ¶óÀÌ´õ »óÅÂ Á¦¾î
+    //   ë ˆì´ì–´/ì½œë¼ì´ë” ìƒíƒœ ì œì–´
     // ------------------------------------------------------------
     private void ApplyCollisionState(bool active)
     {
-        // Äİ¶óÀÌ´õ on/off
+        // ì½œë¼ì´ë” on/off
         if (obstacleCollider != null)
             obstacleCollider.enabled = active;
 
-        // ·¹ÀÌ¾î Obstacle / IgnoreCard ÀüÈ¯
+        // ë ˆì´ì–´ Obstacle / IgnoreCard ì „í™˜
         int targetLayer = active ? obstacleLayer : ignoreCardLayer;
         if (targetLayer >= 0)
             SetLayerRecursively(model.gameObject, targetLayer);

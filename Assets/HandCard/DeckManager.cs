@@ -13,6 +13,10 @@ public class DeckManager : MonoBehaviour
 
     private List<GameObject> deckCards = new List<GameObject>();
 
+    public AudioClip hoverSound;
+    public AudioClip clickSound;
+
+
     // (선택) 필요하면 실제로 사용된 카드 목록을 저장해서 재사용해도 됨
     private List<Sprite> removedCards = new List<Sprite>();
     public List<Sprite> RemovedCards => removedCards;
@@ -146,7 +150,11 @@ public class DeckManager : MonoBehaviour
             rtCard.sizeDelta = new Vector2(cardWidth, cardHeight);
             rtCard.anchoredPosition = new Vector2(x, y);
 
-            card.AddComponent<DeckCard>();
+            DeckCard dc = card.AddComponent<DeckCard>();
+
+            // 🔥 DeckCard 에 효과음 주입
+            dc.hoverSound = hoverSound;
+            dc.clickSound = clickSound;
 
             deckCards.Add(card);
         }

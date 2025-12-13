@@ -1,2 +1,14 @@
 fileFormatVersion: 2
 guid: 8c2603c2bef794c488a0fab6e82dcdbf
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - startSFX: {fileID: 8300000, guid: f9411ca981130b949b6dda9648b67742, type: 3}
+  - loopSFX: {fileID: 8300000, guid: f9411ca981130b949b6dda9648b67742, type: 3}
+  - stopSFX: {fileID: 8300000, guid: f9411ca981130b949b6dda9648b67742, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

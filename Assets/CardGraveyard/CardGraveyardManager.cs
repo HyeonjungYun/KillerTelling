@@ -150,7 +150,9 @@ public class CardGraveyardManager : MonoBehaviour
 
         // 3. 복합: 보스 과녁
         bool bossCondition = spade >= 4 && diamond >= 3 && heart >= 2 && club >= 2;
-        if (movingTarget != null) movingTarget.active = bossCondition;
+        if (movingTarget != null)
+            movingTarget.SetActive(bossCondition);
+
 
         // 4. 🔥 다이아: 에너지 드링크 (입력 차단 + 연출)
         if (!drinkPlayed && diamond >= 4 && energyDrinkMover != null)

@@ -79,6 +79,10 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(List<DialogueLine> lines, Action onComplete)
     {
+        Debug.Log($"[StartDialogue] lines={lines?.Count}, isDialogueActive={isDialogueActive}");
+        Debug.Log("A"); // 조건 진입
+        Debug.Log("B"); // 패널 활성화 직전
+        Debug.Log("C"); // 코루틴 시작 직전
         if (lines == null || lines.Count == 0)
         {
             onComplete?.Invoke();
