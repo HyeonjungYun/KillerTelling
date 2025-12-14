@@ -92,7 +92,7 @@ public class TutorialManager : MonoBehaviour
         currentStep = Step.Intro_WaitFirstJoker;
         waitingClick = false;
 
-        SetText("튜토리얼 시작!\n테이블에 표시된 조커 중 하나를 선택하면 던지기 모드에 진입합니다.");
+        SetText("튜토리얼 시작!\n테이블에 표시된 '조커카드' 중 하나를 선택하면\n'던지기 모드'에 진입합니다.");
         SetClickCueActive(false);
     }
 
@@ -124,7 +124,7 @@ public class TutorialManager : MonoBehaviour
 
                 // ✅ 이 문구는 “클릭으로 넘기는” 문구가 아니라,
                 // 바로 다음(2초 후) 자동으로 4하트 안내가 떠야 하므로 ▼ OFF
-                SetText("마우스 우측 클릭을 누르면 왼쪽/오른쪽/직선 순서로 궤적을 변경할 수 있습니다.");
+                SetText("마우스 우클릭을 하시면\n궤적을 변경할 수 있습니다.");
                 SetClickCueActive(false);
 
                 StartAutoAdvanceToHit4Heart();
@@ -132,31 +132,31 @@ public class TutorialManager : MonoBehaviour
 
             case Step.ExplainRenew1:
                 currentStep = Step.ExplainRenew2;
-                SetTextWithCue("과녁을 갱신하면 기존에 걸려 있던 카드들은 카드 무덤에 이동하게 됩니다.", true);
+                SetTextWithCue("과녁 갱신 시 과녁 위의 카드들은\n'카드 무덤'으로 버려집니다.", true);
                 waitingClick = true;
                 break;
 
             case Step.ExplainRenew2:
                 currentStep = Step.ExplainObstacle1;
-                SetTextWithCue("카드 과녁에 특정 카드들이 쌓이면 카드 명중을 방해하는 장애물이 등장합니다!", true);
+                SetTextWithCue("카드 무덤에 특정 카드들이 쌓이면 플레이를 방해하는 '장애물'이 등장합니다!", true);
                 waitingClick = true;
                 break;
 
             case Step.ExplainObstacle1:
                 currentStep = Step.ExplainObstacle2;
-                SetTextWithCue("장애물은 전체 스테이지 동안 유지되기 때문에 과녁 갱신에는 신중함이 필요합니다!", true);
+                SetTextWithCue("장애물은 전체 스테이지 동안 유지되기 때문에\n과녁 갱신에는 신중함이 필요합니다!", true);
                 waitingClick = true;
                 break;
 
             case Step.ExplainObstacle2:
                 currentStep = Step.ExplainDeck1;
-                SetTextWithCue("우측 상단의 덱을 통해 아직 과녁에 등장하지 않은 카드들을 확인할 수 있습니다.", true);
+                SetTextWithCue("우측 상단 덱에서는 아직 과녁에 걸리지 않은\n카드들을 확인할 수 있습니다.", true);
                 waitingClick = true;
                 break;
 
             case Step.ExplainDeck1:
                 currentStep = Step.ExplainDeck2;
-                SetTextWithCue("만약 원하는 카드를 바로 얻고 싶으면 해당 카드를 클릭하면 됩니다.", true);
+                SetTextWithCue("원하는 카드를 바로 얻고 싶으면 우측 상단의\n덱에서 카드를 클릭하시면 됩니다.", true);
                 waitingClick = true;
                 break;
 
@@ -164,7 +164,7 @@ public class TutorialManager : MonoBehaviour
                 currentStep = Step.WaitSecondCardFromDeck;
 
                 // ✅ 여기부터는 “플레이가 진행”되는 구간이므로 ▼ OFF
-                SetTextWithCue("현재 덱에 있는 카드와 함께 원페어를 구성할 수 있는 카드를 선택해 보세요.", false);
+                SetTextWithCue("현재 덱에 있는 카드와 함께 '원페어(One Pair)' 이상의 덱을 구성할 수 있는 카드를 택해 보세요.", false);
                 break;
 
             case Step.ExplainPenalty1:
@@ -198,7 +198,7 @@ public class TutorialManager : MonoBehaviour
         currentStep = Step.After5Sec_ShowHit4Heart;
 
         // ✅ 자동 안내는 클릭 유도 X → ▼ OFF
-        SetTextWithCue("궤적을 참고하여 과녁에 걸린 4하트 카드를 명중시켜 보세요!", false);
+        SetTextWithCue("궤적을 참고하여 과녁에 걸린\n'4하트 카드'를 명중시켜 보세요!", false);
 
         autoAdvanceRoutine = null;
     }
@@ -212,7 +212,7 @@ public class TutorialManager : MonoBehaviour
             currentStep = Step.AfterFirstJoker_ShowHold;
 
             // ✅ “이 문구만” 클릭 유도 표시 필요
-            SetTextWithCue("조커를 잡은 후 클릭을 유지하면 예상 궤적을 확인할 수 있습니다.", false);
+            SetTextWithCue("조커카드를 잡은 후 클릭을 유지하면\n'예상 궤적'이 표시됩니다.", false);
             waitingClick = true;
         }
         else if (currentStep == Step.WaitSecondJokerPick)
@@ -220,7 +220,7 @@ public class TutorialManager : MonoBehaviour
             currentStep = Step.ExplainRenew1;
 
             // ✅ 사용자가 원한 긴 구간(renew~deck 설명)은 클릭으로 넘김 → ▼ ON
-            SetTextWithCue("과녁에 걸린 카드로 목표 덱을 만들기 어렵다면 'Renew' 버튼을 눌러보세요.", false);
+            SetTextWithCue("원하는 카드가 과녁에 없을 경우 'Renew' 버튼을 눌러보세요.", false);
             waitingClick = true;
         }
     }
@@ -243,7 +243,7 @@ public class TutorialManager : MonoBehaviour
         currentStep = Step.ShowGoalAndOpenHelp;
 
         // ✅ 목표 안내는 행동 유도 문구. 클릭 유도 X → ▼ OFF
-        SetTextWithCue("이번 스테이지의 목표 덱은 원페어입니다.\n도움말 버튼을 눌러 족보를 확인해보세요.", false);
+        SetTextWithCue("이번 스테이지의 목표는 '원페어(One Pair)' 이상입니다. [?] 버튼을 눌러 족보를 확인해보세요.", false);
 
         if (helpRoutine != null) StopCoroutine(helpRoutine);
         helpRoutine = StartCoroutine(OpenHelpAfterDelay());
@@ -268,7 +268,7 @@ public class TutorialManager : MonoBehaviour
         currentStep = Step.WaitSecondJokerPick;
 
         // ✅ 이 문구는 클릭 유도 아님(다시 조커 집기 행동) → ▼ OFF
-        SetTextWithCue("그럼 두 번째 카드를 얻기 위해 다시 조커를 집어봅시다.", false);
+        SetTextWithCue("그럼 두 번째 카드를 얻기 위해 다시 조커카드를 집어봅시다.", false);
     }
 
     public void OnCardTakenFromDeck(Sprite spr)
@@ -279,7 +279,7 @@ public class TutorialManager : MonoBehaviour
         if (HandManager.Instance.selectedCard3DSpawnPoint.childCount >= 2)
         {
             currentStep = Step.ExplainPenalty1;
-            SetTextWithCue("덱에서 카드를 가져오면 다음 스테이지부터 조커 개수가 줄어듭니다.", true);
+            SetTextWithCue("원하는 카드를 가져오는 대신, 다음 스테이지부터 지급받는 조커 개수가 -1 줄어듭니다.", true);
             waitingClick = true;
         }
     }
@@ -359,7 +359,7 @@ public class TutorialManager : MonoBehaviour
         if (currentStep == Step.WaitSecondJokerPick)
         {
             currentStep = Step.ExplainRenew1;
-            SetTextWithCue("과녁에 걸린 카드로 목표 덱을 만들기 어렵다면 우측 하단의 'Renew' 버튼을 눌러보세요.", false);
+            SetTextWithCue("원하는 카드가 과녁에 없을 경우 'Renew' 버튼을 눌러보세요.", false);
             waitingClick = true;
         }
     }

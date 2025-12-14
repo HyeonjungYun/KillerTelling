@@ -51,10 +51,7 @@ public class JokerStack3D : MonoBehaviour
     private readonly List<Transform> spawnedJokers = new List<Transform>();
 
     // ================================================================
-    void Start()
-    {
-        InitStageFromGlobal();
-    }
+    
 
     // 스테이지 시작 시 공통 초기화
     private void InitStageFromGlobal()

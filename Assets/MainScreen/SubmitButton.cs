@@ -24,6 +24,12 @@ public class SubmitButton : MonoBehaviour
     public Transform goalCardArea;
     public GameObject resultCardPrefab;
 
+    [Header("Result Background")]
+    public Image resultBackgroundImage;
+    public Sprite clearBackgroundSprite;
+    public Sprite failBackgroundSprite;
+
+
     // =========================================================
     // 🔊 (추가) SFX / BGM
     // =========================================================
@@ -275,6 +281,12 @@ public class SubmitButton : MonoBehaviour
         if (resultCanvas != null)
             resultCanvas.SetActive(true);
 
+        if (resultBackgroundImage != null)
+        {
+            resultBackgroundImage.sprite =
+                isClear ? clearBackgroundSprite : failBackgroundSprite;
+        }
+
         if (resultCanvasText != null)
         {
             bool jokerDepleted = IsJokerDepleted();
@@ -364,16 +376,16 @@ public class SubmitButton : MonoBehaviour
             if (resultCanvas != null)
                 resultCanvas.SetActive(false);
 
-            // 🎵 (선택) 결과창 닫힐 때 BGM 재개
-            if (resumeBgmOnCloseIfClear && BGMManager.Instance != null)
-                BGMManager.Instance.Resume();
+            // ❌ 튜토리얼 → Stage1 전환에서는 Resume 하면 안 됨
+            // StageManager 쪽에서 PlayStage(1)을 책임지게 둔다
 
-            // ✅ 실전 Stage1에서 다시 제출 가능하도록 상태 리셋
             hasSubmittedThisStage = false;
             autoSubmittedByJokerDepletedThisStage = false;
 
             return;
         }
+
+
 
         // ✅ 일반 스테이지: 클리어면 다음 스테이지, 실패면 종료
         if (lastIsClear)
@@ -422,6 +434,7 @@ public class SubmitButton : MonoBehaviour
 
             GameObject slot = Instantiate(resultSlotPrefab, playerCardArea);
             RectTransform rt = slot.GetComponent<RectTransform>();
+      
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = new Vector2(startX + i * gapX, y);
 
@@ -439,6 +452,7 @@ public class SubmitButton : MonoBehaviour
 
             GameObject card = Instantiate(resultCardPrefab, playerCardArea);
             RectTransform rt = card.GetComponent<RectTransform>();
+            DisableHover(card);
 
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = slotPositions[i].anchoredPosition;
@@ -481,6 +495,7 @@ public class SubmitButton : MonoBehaviour
 
             GameObject slot = Instantiate(resultSlotPrefab, goalCardArea);
             RectTransform rt = slot.GetComponent<RectTransform>();
+
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = new Vector2(startX + i * gapX, y);
 
@@ -498,6 +513,7 @@ public class SubmitButton : MonoBehaviour
 
             GameObject card = Instantiate(resultCardPrefab, goalCardArea);
             RectTransform rt = card.GetComponent<RectTransform>();
+            DisableHover(card);
 
             rt.sizeDelta = new Vector2(55f, 75f);
             rt.anchoredPosition = slotPositions[i].anchoredPosition;
@@ -518,4 +534,17 @@ public class SubmitButton : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
     }
+
+    private void DisableHover(GameObject card)
+    {
+        // Hover 관련 MonoBehaviour만 골라서 비활성화
+        foreach (var comp in card.GetComponents<MonoBehaviour>())
+        {
+            if (comp.GetType().Name.Contains("Hover"))
+            {
+                comp.enabled = false;
+            }
+        }
+    }
+
 }

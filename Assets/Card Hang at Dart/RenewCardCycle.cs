@@ -130,11 +130,16 @@ public class RenewCardCycle : MonoBehaviour
 
             Destroy(child.gameObject);
         }
-
         Debug.Log($"🪦 [Graveyard] 과녁→무덤 이동: {removeList.Count}장");
 
-        if (removeList.Count > 0 && CardGraveyardManager.Instance != null)
-            CardGraveyardManager.Instance.AddCards(removeList);
+        if (removeList.Count > 0)
+        {
+            // 🔊 무덤으로 이동할 때 효과음
+            PlaySfx(graveyardSound);
+
+            if (CardGraveyardManager.Instance != null)
+                CardGraveyardManager.Instance.AddCards(removeList);
+        }
     }
 
 

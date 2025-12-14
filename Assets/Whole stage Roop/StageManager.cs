@@ -38,6 +38,24 @@ public class StageManager : MonoBehaviour
     public GameObject resultMainButton;   // 실패/클리어 상관없이 표시(Main)
     public GameObject resultCheckButton;  // 클리어 시에만 표시(Check)
 
+    [Header("Obstacle References (SFX Control)")]
+    public MovingTargetObstacle movingTarget;
+    public ChainPendulum chainPendulum;
+
+    [Header("UI / Flow SFX")]
+    public AudioClip gameStartClickSFX;      // 메인 버튼 클릭
+    [Header("Dialogue / Transition SFX")]
+    public AudioClip radioStaticSFX;     // 치지직
+    public AudioClip screenTransitionSFX; // 화면전환
+
+  
+
+    [Range(0f, 1f)]
+    public float uiSfxVolume = 1f;
+
+    private AudioSource uiAudioSource;
+
+
     private bool isStageEnded = false;
 
     // ✅ Stage1 "튜토리얼 페이즈" 여부
@@ -60,8 +78,21 @@ public class StageManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
 
+        // 🔊 UI SFX AudioSource
+        uiAudioSource = gameObject.AddComponent<AudioSource>();
+        uiAudioSource.playOnAwake = false;
+        uiAudioSource.loop = false;
+        uiAudioSource.volume = uiSfxVolume;
+
         EnsureResultButtonsRef();
         HideResultButtons();
+    }
+
+    private void PlayUISfx(AudioClip clip)
+    {
+        if (clip == null || uiAudioSource == null) return;
+        uiAudioSource.volume = uiSfxVolume;
+        uiAudioSource.PlayOneShot(clip);
     }
 
     private void Start()
@@ -92,9 +123,29 @@ public class StageManager : MonoBehaviour
         }
     }
 
+    private void StartDialogueWithRadio(
+    List<DialogueLine> dialogue,
+    System.Action onDialogueEnd
+)
+    {
+        // ✅ 라디오 대화 시작 = 무조건 치지직
+        PlayUISfx(radioStaticSFX);
+
+        DialogueManager.Instance.StartDialogue(dialogue, onDialogueEnd);
+    }
+
+
+
     public void OnClickGameStart()
     {
-        if (mainMenuCanvas != null) mainMenuCanvas.SetActive(false);
+        // ✅ 메인 버튼 클릭음 (유지)
+        PlayUISfx(gameStartClickSFX);
+
+        if (mainMenuCanvas != null)
+            mainMenuCanvas.SetActive(false);
+
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.Stop();
 
         currentStage = 1;
         isStage1TutorialPhase = false;
@@ -104,17 +155,13 @@ public class StageManager : MonoBehaviour
         pendingStageIndex = -1;
 
         isStageEnded = false;
-
         HideResultButtons();
 
+        // 📻 라디오 위치로 이동 (소리 X)
         if (CameraDirector.Instance != null && camPosRadio != null)
             CameraDirector.Instance.MoveToTarget(camPosRadio);
 
         SetGameUIActive(false);
-
-        // 🎵 BGM: 게임 시작 시 1스테이지 테마로 전환 (참고 코드와 동일한 핵심)
-        if (BGMManager.Instance != null)
-            BGMManager.Instance.PlayStage(1);
 
         StageDialogueProfile stage1Profile = GetDialogueProfile(1);
 
@@ -123,36 +170,49 @@ public class StageManager : MonoBehaviour
             stage1Profile.preStageDialogue != null &&
             stage1Profile.preStageDialogue.Count > 0)
         {
-            DialogueManager.Instance.StartDialogue(stage1Profile.preStageDialogue, StartStage1TutorialPhase);
+            // ✅ 대화 시작 = 치지직
+            StartDialogueWithRadio(
+                stage1Profile.preStageDialogue,
+                () =>
+                {
+                    // ✅ 대화 종료 → 게임 화면 전환
+                    PlayUISfx(screenTransitionSFX);
+                    StartStage1TutorialPhase();
+                }
+            );
         }
         else
         {
+            // 대화 없으면 바로 게임 시작
+            PlayUISfx(screenTransitionSFX);
             StartStage1TutorialPhase();
         }
     }
+
 
     // ✅ Stage1 튜토 페이즈 세팅
     private void StartStage1TutorialPhase()
     {
         currentStage = 1;
         isStage1TutorialPhase = true;
+     
 
         pendingTutorialClear = false;
         pendingStageClear = false;
         pendingStageIndex = -1;
 
         isStageEnded = false;
-
         HideResultButtons();
 
-        // 🎵 BGM: 튜토리얼도 Stage1 테마를 쓰는 구조라면 여기서 한번 더 보장
+        // 🎵 튜토리얼 전용 BGM
         if (BGMManager.Instance != null)
-            BGMManager.Instance.PlayStage(1);
+            BGMManager.Instance.PlayTutorial();
 
         if (CameraDirector.Instance != null && camPosGame != null)
             CameraDirector.Instance.MoveToTarget(camPosGame);
 
         SetGameUIActive(true);
+
 
         if (DeckManager.Instance != null)
             DeckManager.Instance.ResetDeckForNewStage();
@@ -240,6 +300,14 @@ public class StageManager : MonoBehaviour
 
         SetGameUIActive(true);
 
+        // 🔊 장애물 루프 사운드 재개
+        if (movingTarget != null)
+            movingTarget.ResumeLoopSFX();
+
+        if (chainPendulum != null)
+            chainPendulum.ResumeLoopSFX();
+
+
         if (DeckManager.Instance != null)
             DeckManager.Instance.ResetDeckForNewStage();
 
@@ -260,20 +328,25 @@ public class StageManager : MonoBehaviour
     // ================================================================
     public void OnSubmitResult(bool isClear)
     {
-        // 튜토리얼 클리어 -> Check 클릭하면 Stage1 실제 시작
+        // 🔥 결과창이 뜨는 순간 BGM 중단
+        if (BGMManager.Instance != null)
+            BGMManager.Instance.Stop();
+
+        // 🔥🔥🔥 장애물/사슬 효과음 중단 (핵심)
+        if (movingTarget != null)
+            movingTarget.StopLoopSFX();
+
+        if (chainPendulum != null)
+            chainPendulum.StopLoopSFX();
+
         if (currentStage == 1 && isStage1TutorialPhase && isClear)
         {
             pendingTutorialClear = true;
             return;
         }
 
-        // 실패는 SubmitButton이 결과창(FAIL) 처리만 하므로 여기선 할 일 없음
-        if (!isClear)
-        {
-            return;
-        }
+        if (!isClear) return;
 
-        // 실제 스테이지 클리어 -> Check 클릭하면 post 대사(있으면) -> 다음 스테이지
         pendingStageClear = true;
         pendingStageIndex = currentStage;
     }
@@ -358,10 +431,11 @@ public class StageManager : MonoBehaviour
         pendingStageClear = false;
         pendingStageIndex = -1;
 
-        // 🎵 BGM: 다음 스테이지 테마로 미리 전환 (대사도 그 스테이지 분위기로)
+        // 🎵 BGM: 다음 스테이지 테마 (라디오 분위기용)
         if (BGMManager.Instance != null)
             BGMManager.Instance.PlayStage(next);
 
+        // 📻 라디오 화면으로 이동 (소리 X)
         if (CameraDirector.Instance != null && camPosRadio != null)
             CameraDirector.Instance.MoveToTarget(camPosRadio);
 
@@ -374,13 +448,25 @@ public class StageManager : MonoBehaviour
             profile.preStageDialogue != null &&
             profile.preStageDialogue.Count > 0)
         {
-            DialogueManager.Instance.StartDialogue(profile.preStageDialogue, () => StartRealStageGameplay(next));
+            // ✅ 대화 시작 = 치지직 (모든 스테이지 공통)
+            StartDialogueWithRadio(
+                profile.preStageDialogue,
+                () =>
+                {
+                    // ✅ 대화 끝 → 게임 화면 전환
+                    PlayUISfx(screenTransitionSFX);
+                    StartRealStageGameplay(next);
+                }
+            );
         }
         else
         {
+            // 대화 없으면 바로 화면 전환
+            PlayUISfx(screenTransitionSFX);
             StartRealStageGameplay(next);
         }
     }
+
 
     private void ResetFromTutorialToMain()
     {

@@ -1,11 +1,24 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class BGMManager : MonoBehaviour
 {
     public static BGMManager Instance;
 
+    public enum BGMState
+    {
+        None,
+        MainMenu,
+        Tutorial,
+        Stage1,
+        Stage2,
+        Stage3,
+        Stage4,
+        Ending
+    }
+
     [Header("BGM Clips")]
     public AudioClip mainMenuBGM;
+    public AudioClip tutorialBGM;   // ðŸ”¥ ì¶”ê°€
     public AudioClip stage1BGM;
     public AudioClip stage2BGM;
     public AudioClip stage3BGM;
@@ -13,6 +26,7 @@ public class BGMManager : MonoBehaviour
     public AudioClip endingBGM;
 
     private AudioSource audioSource;
+    private BGMState currentState = BGMState.None;
 
     private void Awake()
     {
@@ -32,15 +46,15 @@ public class BGMManager : MonoBehaviour
     }
 
     // ===============================
-    // ±âº» Á¦¾î
+    // ë‚´ë¶€ ê³µí†µ ìž¬ìƒ
     // ===============================
-    public void Play(AudioClip clip)
+    private void PlayInternal(AudioClip clip, BGMState state)
     {
         if (clip == null) return;
+        if (currentState == state && audioSource.isPlaying) return;
 
-        if (audioSource.clip == clip && audioSource.isPlaying)
-            return;
-
+        currentState = state;
+        audioSource.Stop();
         audioSource.clip = clip;
         audioSource.Play();
     }
@@ -48,6 +62,7 @@ public class BGMManager : MonoBehaviour
     public void Stop()
     {
         audioSource.Stop();
+        currentState = BGMState.None;
     }
 
     public void Pause()
@@ -63,20 +78,25 @@ public class BGMManager : MonoBehaviour
     }
 
     // ===============================
-    // »óÈ²º° ·¡ÆÛ
+    // ì™¸ë¶€ í˜¸ì¶œìš©
     // ===============================
-    public void PlayMainMenu() => Play(mainMenuBGM);
+    public void PlayMainMenu()
+        => PlayInternal(mainMenuBGM, BGMState.MainMenu);
+
+    public void PlayTutorial()
+        => PlayInternal(tutorialBGM, BGMState.Tutorial);
 
     public void PlayStage(int stage)
     {
         switch (stage)
         {
-            case 1: Play(stage1BGM); break;
-            case 2: Play(stage2BGM); break;
-            case 3: Play(stage3BGM); break;
-            case 4: Play(stage4BGM); break;
+            case 1: PlayInternal(stage1BGM, BGMState.Stage1); break;
+            case 2: PlayInternal(stage2BGM, BGMState.Stage2); break;
+            case 3: PlayInternal(stage3BGM, BGMState.Stage3); break;
+            case 4: PlayInternal(stage4BGM, BGMState.Stage4); break;
         }
     }
 
-    public void PlayEnding() => Play(endingBGM);
+    public void PlayEnding()
+        => PlayInternal(endingBGM, BGMState.Ending);
 }

@@ -77,6 +77,20 @@ public class GoalDeckManager : MonoBehaviour
         ShowDescription(stageIndex);
     }
 
+    private void DisableHover(GameObject card)
+    {
+        // Hover 스크립트가 어떤 타입이든 전부 차단
+        var hover = card.GetComponent<MonoBehaviour>();
+        foreach (var comp in card.GetComponents<MonoBehaviour>())
+        {
+            // 클래스명에 Hover가 들어간 컴포넌트만 비활성화
+            if (comp.GetType().Name.Contains("Hover"))
+            {
+                comp.enabled = false;
+            }
+        }
+    }
+
     // --------------------------------------------
     // 0) 튜토리얼용 One Pair 예시 (단순 예시용)
     // --------------------------------------------
@@ -175,6 +189,8 @@ public class GoalDeckManager : MonoBehaviour
 
             Image img = card.GetComponent<Image>();
             if (img != null) img.sprite = spr;
+
+            DisableHover(card); // ✅ 여기
 
             RectTransform rt = card.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0, 1);
