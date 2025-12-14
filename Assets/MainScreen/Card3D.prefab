@@ -13,10 +13,10 @@ GameObject:
   - component: {fileID: 796399926970135487}
   - component: {fileID: 3143116351432536391}
   - component: {fileID: 5637042625448194133}
-  - component: {fileID: 8381529625923085605}
-  - component: {fileID: 1920753100742226628}
-  - component: {fileID: -1296421329143211518}
-  - component: {fileID: -3264219751087175214}
+  - component: {fileID: 5276146905246335817}
+  - component: {fileID: 8795365479618804960}
+  - component: {fileID: -3021477900433398186}
+  - component: {fileID: 4703261542040770460}
   m_Layer: 0
   m_Name: Card3D
   m_TagString: Untagged
@@ -126,7 +126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3647c5f39c6312345ac59d5482782b92, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!54 &8381529625923085605
+--- !u!54 &5276146905246335817
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -153,7 +153,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!65 &1920753100742226628
+--- !u!65 &8795365479618804960
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -174,7 +174,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1.0000001, z: 6.123235e-17}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!120 &-1296421329143211518
+--- !u!120 &-3021477900433398186
 LineRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
@@ -281,7 +281,7 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
---- !u!114 &-3264219751087175214
+--- !u!114 &4703261542040770460
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -306,11 +306,17 @@ MonoBehaviour:
   handPos: {fileID: 0}
   wallPlacer: {fileID: 0}
   cameraReturnDelay: 0.8
-  pickSound: {fileID: 8300000, guid: b971ffb30539b55419abe8378015d8f0, type: 3}
+  vanishDuration: 0.25
+  vanishEndScaleMultiplier: 0
+  pickSound: {fileID: 8300000, guid: 6136c69770cd24c4ebbdee3ae3dc4662, type: 3}
   readySound: {fileID: 0}
-  aimSound: {fileID: 8300000, guid: 33fafa83f9411a24e9e62fac2ca0388f, type: 3}
-  throwSound: {fileID: 8300000, guid: 785fbfa7b6881a541a47835f68a71a93, type: 3}
+  aimSound: {fileID: 8300000, guid: beb7727626bb55c499da5d59320d7c08, type: 3}
+  throwSound: {fileID: 8300000, guid: 4e8e0629e7c1f59498a17343d2844c8e, type: 3}
   hitWallSound: {fileID: 0}
   hitObstacleSound: {fileID: 0}
   fallSound: {fileID: 0}
   hitTargetSound: {fileID: 0}
+  consumeSound: {fileID: 0}
+  aimingLoopBgm: {fileID: 0}
+  sfxVolume: 1
+  bgmVolume: 0.5

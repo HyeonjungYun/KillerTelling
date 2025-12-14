@@ -13,9 +13,9 @@ public class DeckManager : MonoBehaviour
 
     private List<GameObject> deckCards = new List<GameObject>();
 
+    // 🔊 (추가) 덱 카드 효과음
     public AudioClip hoverSound;
     public AudioClip clickSound;
-
 
     // (선택) 필요하면 실제로 사용된 카드 목록을 저장해서 재사용해도 됨
     private List<Sprite> removedCards = new List<Sprite>();
@@ -150,9 +150,8 @@ public class DeckManager : MonoBehaviour
             rtCard.sizeDelta = new Vector2(cardWidth, cardHeight);
             rtCard.anchoredPosition = new Vector2(x, y);
 
+            // ✅ DeckCard 추가 + 효과음 주입
             DeckCard dc = card.AddComponent<DeckCard>();
-
-            // 🔥 DeckCard 에 효과음 주입
             dc.hoverSound = hoverSound;
             dc.clickSound = clickSound;
 

@@ -12,6 +12,7 @@ public class ChainPendulum : MonoBehaviour
     public AudioClip startSwingSFX;   // 흔들기 시작
     public AudioClip stopSwingSFX;    // 흔들기 종료
     public AudioClip swingLoopSFX;    // 흔들리는 동안 루프
+    [Range(0f, 1f)] public float sfxVolume = 1f;
 
     private AudioSource audioSource;
     private float baseZ;
@@ -23,7 +24,8 @@ public class ChainPendulum : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         audioSource.playOnAwake = false;
         audioSource.loop = false;
-        audioSource.spatialBlend = 0f;   // 🔥 2D 환경 필수
+        audioSource.spatialBlend = 0f; // 🔥 2D 사운드
+        audioSource.volume = sfxVolume;
     }
 
     private void Update()
@@ -41,35 +43,42 @@ public class ChainPendulum : MonoBehaviour
 
         if (active)
         {
-            // ▶ 시작음
+            // ▶ 시작 효과음
             if (startSwingSFX != null)
-                audioSource.PlayOneShot(startSwingSFX);
+                audioSource.PlayOneShot(startSwingSFX, sfxVolume);
 
-            // ▶ 루프음
+            // ▶ 흔들림 루프
             if (swingLoopSFX != null)
             {
                 audioSource.clip = swingLoopSFX;
                 audioSource.loop = true;
-                audioSource.PlayDelayed(0.05f);
+                audioSource.volume = sfxVolume;
+                audioSource.PlayDelayed(0.05f); // 시작음 겹침 방지
             }
         }
         else
         {
             // ■ 루프 중단
             if (audioSource.isPlaying)
+            {
+                audioSource.loop = false;
                 audioSource.Stop();
+            }
 
-            // ■ 종료음
+            // ■ 종료 효과음
             if (stopSwingSFX != null)
-                audioSource.PlayOneShot(stopSwingSFX);
+                audioSource.PlayOneShot(stopSwingSFX, sfxVolume);
         }
     }
 
-    // 🔥 StageManager에서 호출용
+    // 🔥 StageManager / SubmitButton에서 호출용
     public void StopLoopSFX()
     {
         if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.loop = false;
             audioSource.Stop();
+        }
     }
 
     public void ResumeLoopSFX()
@@ -78,6 +87,7 @@ public class ChainPendulum : MonoBehaviour
         {
             audioSource.clip = swingLoopSFX;
             audioSource.loop = true;
+            audioSource.volume = sfxVolume;
             audioSource.Play();
         }
     }

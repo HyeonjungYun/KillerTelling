@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1554285678137047573}
   - component: {fileID: 8224497355064604241}
   - component: {fileID: 1577128571481123913}
-  - component: {fileID: 7664926305231018847}
+  - component: {fileID: -2540421895230833168}
   m_Layer: 5
   m_Name: Card
   m_TagString: TargetCard
@@ -94,7 +94,7 @@ MonoBehaviour:
     callback:
       m_PersistentCalls:
         m_Calls: []
---- !u!114 &7664926305231018847
+--- !u!114 &-2540421895230833168
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -107,5 +107,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hoverScale: 1.6
-  hoverSound: {fileID: 8300000, guid: 8b61bfb76f5459143b1f9c3c5ad78bae, type: 3}
+  hoverSound: {fileID: 8300000, guid: 6c77119a9a4c83f45bcf119dac034936, type: 3}
   exitSound: {fileID: 0}
+  sfxVolume: 1
+  hoverLoopBgm: {fileID: 0}
+  bgmVolume: 0.5

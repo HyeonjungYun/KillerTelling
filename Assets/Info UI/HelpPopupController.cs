@@ -3,6 +3,8 @@ using UnityEngine.UI;
 
 public class HelpPopupController : MonoBehaviour
 {
+    public static HelpPopupController Instance;
+
     public GameObject helpPopup;
     public Button helpButton;
     public Button closeButton;
@@ -13,30 +15,69 @@ public class HelpPopupController : MonoBehaviour
 
     private AudioSource audioSource;
 
-    private void Start()
+    private void Awake()
     {
+        if (Instance == null) Instance = this;
+        else if (Instance != this) Destroy(gameObject);
+
+        // 🔊 AudioSource 자동 추가
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
-
-        helpPopup.SetActive(false);
-
-        helpButton.onClick.AddListener(OpenPopup);
-        closeButton.onClick.AddListener(ClosePopup);
     }
 
-    void OpenPopup()
+    private void Start()
     {
+        if (helpPopup != null)
+            helpPopup.SetActive(false);
+
+        if (helpButton != null)
+            helpButton.onClick.AddListener(OpenPopup);
+
+        if (closeButton != null)
+            closeButton.onClick.AddListener(ClosePopup);
+    }
+
+    public bool IsOpen()
+    {
+        return helpPopup != null && helpPopup.activeSelf;
+    }
+
+    public void OpenPopup()
+    {
+        // 🔊 열기 사운드
         if (openSound != null)
             audioSource.PlayOneShot(openSound);
 
-        helpPopup.SetActive(true);
+        if (helpPopup != null)
+            helpPopup.SetActive(true);
     }
 
-    void ClosePopup()
+    public void ClosePopup()
     {
+        // 🔊 닫기 사운드
         if (closeSound != null)
             audioSource.PlayOneShot(closeSound);
 
-        helpPopup.SetActive(false);
+        if (helpPopup != null)
+            helpPopup.SetActive(false);
+
+        // ✅ Stage1 튜토 페이즈일 때만 튜토 진행 이벤트 전달
+        if (StageManager.Instance != null &&
+            StageManager.Instance.currentStage == 1 &&
+            StageManager.Instance.IsStage1TutorialPhase &&
+            TutorialManager.Instance != null)
+        {
+            TutorialManager.Instance.OnHelpClosed();
+        }
+    }
+
+    public void ForceOpenFromTutorial()
+    {
+        // 🔊 튜토리얼 강제 오픈도 동일한 사운드 사용
+        if (openSound != null)
+            audioSource.PlayOneShot(openSound);
+
+        if (helpPopup != null)
+            helpPopup.SetActive(true);
     }
 }
