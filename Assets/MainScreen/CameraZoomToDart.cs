@@ -2,68 +2,75 @@
 
 public class CameraZoomToDart : MonoBehaviour
 {
-    public float zoomSpeed = 6f;
+    [Header("Settings")]
+    public float zoomInPos = -6.0f;   // 줌 인(가까이) 했을 때 Z 위치
+    public float zoomOutPos = 3.5f;   // 줌 아웃(멀리) 했을 때 Z 위치
 
-    // Z 값 범위
-    public float zoomMin = -7.6f;   // 제일 가까운 쪽 (카메라가 앞으로)
-    public float zoomMax = 3.5f;    // 제일 먼 쪽
-
-    private float defaultZ;         // 시작 Z 저장
-    private float defaultY;         // 시작 Y 저장 ⭐
-    private bool zoomLocked = false;  // 조커가 조준 중일 때 true
+    // 내부 상태 변수
+    private float defaultY;           // Y 위치 고정용
+    private bool isZoomedIn = false;  // 현재 줌 상태 (true면 줌인 상태)
+    private bool zoomLocked = false;  // 조준 중 잠금 여부
 
     void Start()
     {
-        Vector3 pos = transform.position;
-        defaultZ = pos.z;
-        defaultY = pos.y;   // ▶ Y는 항상 이 높이를 유지하게 만들 예정
+        // 시작할 때 Y 높이 저장
+        defaultY = transform.position.y;
+
+        // 시작할 때 줌 아웃 상태라고 가정하고 위치 잡기
+        isZoomedIn = false;
+        SetPositionZ(zoomOutPos);
     }
 
     void Update()
     {
-        if (zoomLocked) return; // 🔒 잠겨있으면 R/E 입력 무시
+        if (zoomLocked) return; // 🔒 잠겨있으면 입력 무시
 
-        float z = transform.position.z;
+        // R 키 하나로 토글 (Toggle)
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            // 상태 뒤집기 (true -> false, false -> true)
+            isZoomedIn = !isZoomedIn;
 
-        // R = 앞으로 다가가기 (Z 감소)
-        if (Input.GetKey(KeyCode.R))
-            z -= zoomSpeed * Time.deltaTime;
+            if (isZoomedIn)
+            {
+                SetPositionZ(zoomInPos); // 줌 인 위치로 이동
+            }
+            else
+            {
+                SetPositionZ(zoomOutPos); // 줌 아웃 위치로 이동
+            }
+        }
+    }
 
-        // E = 뒤로 물러나기 (Z 증가)
-        if (Input.GetKey(KeyCode.E))
-            z += zoomSpeed * Time.deltaTime;
-
-        // 범위 제한
-        z = Mathf.Clamp(z, zoomMin, zoomMax);
-
-        // ⭐ Y는 항상 defaultY 고정 → 위로 떠버리는 현상 방지
+    // [내부 헬퍼 함수] Z값만 변경하여 즉시 이동
+    private void SetPositionZ(float targetZ)
+    {
         transform.position = new Vector3(
             transform.position.x,
             defaultY,
-            z
+            targetZ
         );
     }
 
-    // 🔒 조커가 “던지기 모드” 들어갈 때 호출
+    // =========================================================
+    // [외부 공개 함수 - 이름 유지]
+    // =========================================================
+
     public void LockZoom()
     {
         zoomLocked = true;
     }
 
-    // 🔓 카드가 벽에 박혀서 던지기 끝났을 때 호출
     public void UnlockZoom()
     {
         zoomLocked = false;
     }
 
-    // 🔄 스테이지 전환 시 Z/Y를 초기 상태로 되돌리고 싶을 때
     public void ResetZoom()
     {
-        Vector3 pos = transform.position;
-        transform.position = new Vector3(
-            pos.x,
-            defaultY,   // 원래 높이
-            defaultZ    // 원래 거리
-        );
+        // 리셋 시 줌 아웃 상태(기본)로 되돌림
+        isZoomedIn = false;
+        SetPositionZ(zoomOutPos);
+        zoomLocked = false;
     }
 }
