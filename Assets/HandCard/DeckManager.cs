@@ -15,8 +15,8 @@ public class DeckManager : MonoBehaviour
     private List<Sprite> removedCards = new List<Sprite>();
     public List<Sprite> RemovedCards => removedCards;
 
-    private float cardWidth = 50f;
-    private float cardHeight = 100f;
+    private float cardWidth = 38f;
+    private float cardHeight = 83f;
     private float spacingX = 6f;
     private float spacingY = 8f;
 
@@ -101,7 +101,7 @@ public class DeckManager : MonoBehaviour
         deckCards.Clear();
 
         List<Sprite> allCards = new List<Sprite>(cardManager.cardSprites);
-        int total = allCards.Count-1;
+        int total = allCards.Count;
 
         for (int i = 0; i < total; i++)
         {
@@ -153,8 +153,6 @@ public class DeckManager : MonoBehaviour
         Debug.Log($"📚 덱카드 생성 완료! {deckCards.Count}장 (전체 {total}칸)");
     }
 
-
-
     void Start()
     {
         if (deckPanel != null)
@@ -165,7 +163,7 @@ public class DeckManager : MonoBehaviour
             rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(1, 1);
 
-            rt.anchoredPosition = new Vector2(-310f, -5f);
+            rt.anchoredPosition = new Vector2(-250f, -5f);
             rt.sizeDelta = new Vector2(100f, 100f);
             rt.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }

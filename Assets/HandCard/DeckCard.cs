@@ -32,10 +32,6 @@ public class DeckCard : MonoBehaviour,
             image.raycastTarget = false;
         }
         transform.localScale = normalScale;
-
-        Outline outline = GetComponent<Outline>();
-        if (outline != null)
-            Destroy(outline);
     }
 
     // ────────────────────────────────
@@ -64,21 +60,17 @@ public class DeckCard : MonoBehaviour,
     // ────────────────────────────────
     // 🔥 Hover Exit
     // ────────────────────────────────
- 
-
     public void OnPointerExit(PointerEventData eventData)
     {
         if (image == null) return;
 
-        // ✅ 이미 사용된(회색 처리된) 카드는 색을 건드리지 말고 그대로 두기
-        if (image.raycastTarget == false)
-            return;
-
         transform.localScale = normalScale;
 
+        // 테두리 제거
         if (outline != null)
             Destroy(outline);
 
+        // 색 되돌리기
         image.color = Color.white;
     }
 
@@ -94,7 +86,4 @@ public class DeckCard : MonoBehaviour,
 
         MarkAsUsed();
     }
-
-
-   
 }

@@ -31,7 +31,17 @@ public class WallCardPlacer : MonoBehaviour
 
     public void PlaceCards(List<Sprite> sprites)
     {
+        // 1. 기존에 배치된 카드 오브젝트들 싹 지우기 (초기화)
+        // targetArea 아래에 있는 모든 자식(이전에 만든 카드들)을 찾아서 파괴합니다.
+        foreach (Transform child in targetArea)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // 2. 논리적 좌표 리스트 초기화
         placedPositions.Clear();
+
+        // 3. 새로 배치 시작
 
         foreach (var spr in sprites)
         {

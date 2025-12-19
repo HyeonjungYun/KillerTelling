@@ -51,9 +51,6 @@ public class HandManager : MonoBehaviour
 
         Debug.Log("🔵 명중 카드 처리: " + sprite.name);
         SpawnSelectedCard3D(sprite);
-
-        isExchangeMode = false;
-        Debug.Log("🔒 교환모드 자동 종료");
     }
 
     public void SpawnSelectedCard3D(Sprite spr)

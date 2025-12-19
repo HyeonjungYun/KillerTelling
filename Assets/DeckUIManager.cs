@@ -42,12 +42,8 @@ public class DeckUIManager : MonoBehaviour
         {
             string s = suits[Random.Range(0, suits.Count)];
             int r = Random.Range(1, 14);
-
-            // ⭐ Ace(1)을 14로 변환 — Evaluator와 동일 체계 유지
-            int convertedRank = (r == 1) ? 14 : r;
-
             Sprite sp = CardManager.GetCardSprite(s, r);
-            deck.Add(new CardData(s, convertedRank, sp));
+            deck.Add(new CardData(s, r, sp));
         }
 
         // 카드 UI 생성
@@ -61,23 +57,19 @@ public class DeckUIManager : MonoBehaviour
             cardObjs.Add(cardObj);
         }
 
-        // 🔹 가로 정중앙
-        float spacing = 20f;
+        // 🔹 완전 정중앙 정렬 계산
+        float spacing = 20f; // HorizontalLayoutGroup과 동일해야 함
         float totalWidth = 0f;
 
-        foreach (var item in cardObjs)
+        foreach (var cardObj in cardObjs)
         {
-            RectTransform rt = item.GetComponent<RectTransform>();
+            RectTransform rt = cardObj.GetComponent<RectTransform>();
             totalWidth += rt.rect.width;
         }
 
         totalWidth += spacing * (cardCount - 1);
-
-        cardParent.localPosition = new Vector3(
-            -totalWidth / 2f + cardObjs[0].GetComponent<RectTransform>().rect.width / 4f,
-            cardParent.localPosition.y,
-            0
-        );
+        // 카드 묶음의 중심이 정확히 가운데 오도록 위치 조정
+        cardParent.localPosition = new Vector3(-totalWidth / 2f + cardObjs[0].GetComponent<RectTransform>().rect.width / 4f, cardParent.localPosition.y, 0);
 
         // 조합 판정
         string rank = DeckEvaluator.EvaluateDeck(deck);

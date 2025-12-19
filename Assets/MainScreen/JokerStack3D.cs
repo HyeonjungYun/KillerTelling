@@ -39,11 +39,10 @@ public class JokerStack3D : MonoBehaviour
     // -------------------------------------------------------------
     // Start
     // -------------------------------------------------------------
-    void Start()
+    public void InitJokers()
     {
         currentJoker = jokerCount;
         UpdateJokerText();
-
         StartCoroutine(SpawnJokerStackAnimated());
     }
 
